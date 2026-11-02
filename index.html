@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080d1b">
+  <title>Raavan eSports</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" onclick="showPage('home')">
+      <span class="brand-icon">R</span>
+      <span>RAAVAN <b>eSPORTS</b></span>
+    </a>
+    <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">☰</button>
+  </header>
+
+  <nav class="nav" id="nav">
+    <button onclick="showPage('home')">Home</button>
+    <button onclick="showPage('tournaments')">Tournaments</button>
+    <button onclick="showPage('myRegistrations')">My Matches</button>
+    <button onclick="showPage('profile')">Profile</button>
+    <button id="adminNav" class="hidden" onclick="showPage('admin')">Admin</button>
+    <button id="authNav" onclick="showPage('auth')">Login</button>
+    <button id="logoutBtn" class="hidden" onclick="logout()">Logout</button>
+  </nav>
+
+  <main class="container">
+    <section id="home" class="page active">
+      <div class="hero">
+        <div class="hero-tag">FREE COMMUNITY TOURNAMENTS</div>
+        <h1>WELCOME TO<br><span>RAAVAN eSPORTS</span></h1>
+        <p>Play together. Compete with skill. Become a champion.</p>
+        <button class="primary-btn" onclick="showPage('tournaments')">Explore Tournaments →</button>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><strong id="homeTournamentCount">0</strong><span>Tournaments</span></div>
+        <div class="stat-card"><strong id="homeUser">Guest</strong><span>Account</span></div>
+      </div>
+      <h2 class="section-title">Featured Tournaments</h2>
+      <div id="homeTournamentList" class="tournament-grid"></div>
+    </section>
+
+    <section id="tournaments" class="page">
+      <div class="page-heading">
+        <span class="eyebrow">COMPETE & WIN</span>
+        <h1>All Tournaments</h1>
+        <p>Choose a match and register for free.</p>
+      </div>
+      <div id="tournamentList" class="tournament-grid"></div>
+    </section>
+
+    <section id="myRegistrations" class="page">
+      <div class="page-heading">
+        <span class="eyebrow">YOUR MATCHES</span>
+        <h1>My Registrations</h1>
+        <p>Your registered tournaments appear here.</p>
+      </div>
+      <div id="myRegistrationList"></div>
+    </section>
+
+    <section id="profile" class="page">
+      <div class="page-heading">
+        <span class="eyebrow">YOUR ACCOUNT</span>
+        <h1>My Profile</h1>
+      </div>
+      <div class="panel profile-panel">
+        <div class="avatar" id="profileAvatar">R</div>
+        <h2 id="profileName">Guest User</h2>
+        <p id="profileEmail">Please login to view your profile.</p>
+        <div class="profile-info">
+          <span>Account status</span>
+          <strong id="profileStatus">Not logged in</strong>
+        </div>
+        <div class="profile-info">
+          <span>Reward points</span>
+          <strong id="profilePoints">0</strong>
+        </div>
+        <button class="primary-btn full" onclick="showPage('auth')">Login / Signup</button>
+      </div>
+      <p class="muted small">Reward points are promotional points only. They have no cash value and cannot be purchased, transferred or withdrawn.</p>
+    </section>
+
+    <section id="auth" class="page">
+      <div class="page-heading">
+        <span class="eyebrow">WELCOME PLAYER</span>
+        <h1>Account Access</h1>
+        <p>Login or create your free account.</p>
+      </div>
+      <div class="panel auth-panel">
+        <div class="tabs">
+          <button id="loginTab" class="tab active" onclick="setAuthMode('login')">Login</button>
+          <button id="signupTab" class="tab" onclick="setAuthMode('signup')">Signup</button>
+        </div>
+        <form id="authForm">
+          <div id="nameGroup" class="form-group hidden">
+            <label>Full Name</label>
+            <input id="authName" type="text" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input id="authEmail" type="email" placeholder="Enter your email" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input id="authPassword" type="password" placeholder="Enter password" minlength="6" required>
+          </div>
+          <button id="authSubmit" class="primary-btn full" type="submit">Login</button>
+        </form>
+        <button id="resetBtn" class="text-btn" onclick="resetPassword()">Forgot password?</button>
+        <p id="authMessage" class="message"></p>
+      </div>
+    </section>
+
+    <section id="admin" class="page">
+      <div class="page-heading">
+        <span class="eyebrow">CONTROL CENTER</span>
+        <h1>Admin Dashboard</h1>
+        <p>Manage community tournaments.</p>
+      </div>
+      <div class="panel">
+        <h2>Create Tournament</h2>
+        <form id="tournamentForm">
+          <div class="form-group">
+            <label>Tournament Name</label>
+            <input id="tName" required placeholder="e.g. Solo Battle">
+          </div>
+          <div class="form-group">
+            <label>Game Mode</label>
+            <select id="tMode">
+              <option>Solo</option><option>Duo</option><option>Squad</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Match Date & Time</label>
+            <input id="tDate" type="datetime-local" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Max Players</label>
+              <input id="tCapacity" type="number" min="2" max="100" value="48" required>
+            </div>
+            <div class="form-group">
+              <label>Reward Points</label>
+              <input id="tPrize" type="number" min="0" value="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Room ID (optional)</label>
+            <input id="tRoom" placeholder="Add later if needed">
+          </div>
+          <div class="form-group">
+            <label>Room Password (optional)</label>
+            <input id="tRoomPassword" placeholder="Add later if needed">
+          </div>
+          <button class="primary-btn full" type="submit">Create Tournament</button>
+          <button class="secondary-btn full hidden" id="cancelEdit" type="button" onclick="cancelTournamentEdit()">Cancel Edit</button>
+        </form>
+        <p id="adminMessage" class="message"></p>
+      </div>
+      <h2 class="section-title">Manage Tournaments</h2>
+      <div id="adminTournamentList"></div>
+      <h2 class="section-title">Recent Registrations</h2>
+      <div id="adminRegistrationList"></div>
+    </section>
+
+    <div id="globalMessage" class="global-message"></div>
+  </main>
+
+  <footer>
+    <strong>RAAVAN eSPORTS</strong>
+    <p>Free community gaming tournaments.</p>
+    <p class="muted small">Points have no cash value. No deposits or withdrawals.</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
