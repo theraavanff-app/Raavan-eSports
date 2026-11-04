@@ -1,0 +1,107 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+    --bg: #09090d;
+    --surface: #14141b;
+    --surface2: #1d1d26;
+    --red: #ed202b;
+    --gold: #f5bd45;
+    --white: #ffffff;
+    --muted: #9999a8;
+}
+
+body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+}
+
+button {
+    font: inherit;
+    cursor: pointer;
+    border: none;
+}
+
+button:active {
+    transform: scale(.96);
+}
+
+.app-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    transition: opacity .3s ease;
+}
+
+.app-loader.hide {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loader-logo,
+.brand-logo {
+    width: 65px;
+    height: 65px;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--gold);
+    border-radius: 18px;
+    color: var(--gold);
+    font-size: 38px;
+    font-weight: 900;
+    background: linear-gradient(145deg, #321014, #111);
+    box-shadow: 0 0 25px #ed202b44;
+}
+
+.app-loader h2 {
+    margin-top: 16px;
+    font-size: 21px;
+    letter-spacing: 2px;
+}
+
+.app-loader h2 span,
+.welcome-screen h1 span {
+    color: var(--gold);
+}
+
+.app-loader p,
+.welcome-screen p {
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 3px;
+    margin-top: 9px;
+}
+
+#app {
+    min-height: 100vh;
+}
+
+.welcome-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
+
+.welcome-screen h1 {
+    font-size: 23px;
+    letter-spacing: 2px;
+}
+
+.hidden {
+    display: none !important;
+}
