@@ -201,18 +201,21 @@ function showJoinSuccess() {
 
         document.getElementById("closeModal").onclick = closeDetails;
 
-        document.getElementById("joinTournament").onclick = () => {
-            if (joined || item.players >= item.capacity) return;
+        
+document.getElementById("joinTournament").onclick = () => {
+    if (joined || item.players >= item.capacity) return;
 
-            joinedTournaments.add(id);
-            item.players++;
+    joinedTournaments.add(id);
+    item.players++;
 
-            renderTournaments(
-                document.querySelector(".category-btn.active")?.dataset.category || "All"
-            );
+    renderTournaments(
+        document.querySelector(".category-btn.active")?.dataset.category || "All"
+    );
 
-            openDetails(id);
-        };
+    openDetails(id);
+
+    showJoinSuccess();
+};
     }
 
     function closeDetails() {
