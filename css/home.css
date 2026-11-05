@@ -518,3 +518,127 @@
     }
 }
 
+/* MY MATCHES PAGE */
+
+.matches-page {
+    min-height: 65vh;
+    padding-bottom: 25px;
+}
+
+.matches-heading {
+    padding: 12px 2px 24px;
+}
+
+.matches-heading > span {
+    color: var(--gold);
+    font-size: 10px;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+
+.matches-heading h2 {
+    font-size: 25px;
+    margin-top: 10px;
+}
+
+.matches-heading p {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 7px;
+}
+
+.my-match-list {
+    display: grid;
+    gap: 14px;
+}
+
+.my-match-card {
+    background: var(--surface);
+    border: 1px solid #ffffff16;
+    border-radius: 17px;
+    padding: 16px;
+}
+
+.my-match-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-weight: bold;
+    color: var(--gold);
+}
+
+.my-match-status {
+    color: #55d99b;
+}
+
+.my-match-card h3 {
+    font-size: 17px;
+    margin: 15px 0;
+}
+
+.my-match-info {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.my-match-info div {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 11px 7px;
+}
+
+.my-match-info small {
+    display: block;
+    color: var(--muted);
+    font-size: 9px;
+    margin-bottom: 7px;
+}
+
+.my-match-info strong {
+    font-size: 11px;
+}
+
+.my-match-view {
+    width: 100%;
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 10px;
+    color: white;
+    background: #a81720;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.matches-empty {
+    text-align: center;
+    padding: 55px 15px;
+    background: var(--surface);
+    border: 1px solid #ffffff12;
+    border-radius: 18px;
+}
+
+.empty-match-icon {
+    font-size: 42px;
+    margin-bottom: 15px;
+}
+
+.matches-empty h3 {
+    font-size: 17px;
+}
+
+.matches-empty p {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 9px 0 20px;
+}
+
+.matches-empty button {
+    background: #bd1723;
+    color: white;
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-weight: bold;
+    font-size: 11px;
+}
+
