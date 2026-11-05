@@ -52,6 +52,31 @@ export function initHomepage() {
 
     // Create tournament details popup
     const modal = document.createElement("div");
+    
+// Success animation element
+const successToast = document.createElement("div");
+successToast.className = "join-success-toast";
+successToast.innerHTML = `
+    <div class="success-check">✓</div>
+    <div>
+        <strong>Successfully Joined!</strong>
+        <small>Your tournament spot is confirmed.</small>
+    </div>
+`;
+document.body.appendChild(successToast);
+
+function showJoinSuccess() {
+    successToast.classList.remove("show");
+
+    void successToast.offsetWidth;
+
+    successToast.classList.add("show");
+
+    setTimeout(() => {
+        successToast.classList.remove("show");
+    }, 2600);
+}
+
     modal.id = "tournamentModal";
     modal.className = "tournament-modal hidden";
     document.body.appendChild(modal);
