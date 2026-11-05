@@ -105,3 +105,154 @@ button:active {
 .hidden {
     display: none !important;
   }
+
+/* ===== RAAVAN AUTH PAGES ===== */
+
+.auth-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 25px 18px;
+    background:
+        radial-gradient(circle at top, #351014 0%, #09090d 55%);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 30px 22px;
+    background: #14141b;
+    border: 1px solid #302027;
+    border-radius: 22px;
+    box-shadow: 0 15px 45px #0008;
+    animation: authEnter .45s ease;
+}
+
+.auth-logo {
+    width: 65px;
+    height: 65px;
+    margin: 0 auto 15px;
+    display: grid;
+    place-items: center;
+    background: #ed202b;
+    color: white;
+    font-size: 35px;
+    font-weight: 900;
+    border-radius: 18px;
+    box-shadow: 0 0 25px #ed202b55;
+}
+
+.auth-card h1 {
+    text-align: center;
+    color: white;
+    font-size: 23px;
+    font-weight: 900;
+}
+
+.auth-card h1 span {
+    color: #ed202b;
+}
+
+.auth-subtitle {
+    text-align: center;
+    color: #f5bd45;
+    font-size: 10px;
+    letter-spacing: 3px;
+    margin: 8px 0 30px;
+}
+
+.auth-card h2 {
+    color: white;
+    font-size: 25px;
+    margin-bottom: 7px;
+}
+
+.auth-description,
+.auth-card > p {
+    color: #9999a8;
+    font-size: 13px;
+}
+
+.auth-card form {
+    margin-top: 25px;
+}
+
+.auth-card label {
+    display: block;
+    color: #ddd;
+    font-size: 13px;
+    margin: 17px 0 8px;
+}
+
+.auth-card input {
+    width: 100%;
+    height: 50px;
+    padding: 0 14px;
+    background: #1d1d26;
+    border: 1px solid #34343e;
+    border-radius: 11px;
+    color: white;
+    font-size: 14px;
+    outline: none;
+}
+
+.auth-card input:focus {
+    border-color: #ed202b;
+    box-shadow: 0 0 0 2px #ed202b22;
+}
+
+.auth-card button {
+    width: 100%;
+    height: 52px;
+    margin-top: 25px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ed202b, #a9000a);
+    color: white;
+    font-weight: 900;
+    font-size: 15px;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.auth-card button:active {
+    transform: scale(.96);
+}
+
+.auth-card button:disabled {
+    opacity: .65;
+}
+
+.auth-error {
+    color: #ff626c;
+    font-size: 12px;
+    margin-top: 12px;
+    overflow-wrap: anywhere;
+}
+
+.auth-switch {
+    text-align: center;
+    margin-top: 23px;
+    color: #aaa;
+    font-size: 13px;
+}
+
+.auth-switch a {
+    color: #f5bd45;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+@keyframes authEnter {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
