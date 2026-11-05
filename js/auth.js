@@ -1,11 +1,17 @@
 
-import { auth } from "./firebase.js";
+import { auth, db } from "./firebase.js";
 
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+import {
+    doc,
+    setDoc,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initAuthPage() {
 
@@ -52,6 +58,11 @@ export function initAuthPage() {
 
             errorBox.textContent = "";
 
+            if (!name) {
+                errorBox.textContent = "Please enter your player name.";
+                return;
+            }
+
             if (password !== confirm) {
                 errorBox.textContent = "Passwords do not match!";
                 return;
@@ -71,11 +82,23 @@ export function initAuthPage() {
                     displayName: name
                 });
 
+                const playerId = "RAAVAN-" +
+                    result.user.uid.slice(0, 8).toUpperCase();
+
+                await setDoc(doc(db, "users", result.user.uid), {
+                    uid: result.user.uid,
+                    name: name,
+                    email: result.user.email,
+                    playerId: playerId,
+                    createdAt: serverTimestamp()
+                });
+
             } catch (error) {
+                console.error("Registration error:", error);
                 errorBox.textContent = error.message;
                 button.disabled = false;
                 button.textContent = "CREATE ACCOUNT";
             }
         });
     }
-                                                 }
+                    }
