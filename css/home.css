@@ -236,7 +236,7 @@
     width: 100%;
     max-width: 650px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     background: #15151df5;
     border-top: 1px solid #ffffff16;
     padding: 11px 12px calc(11px + env(safe-area-inset-bottom));
