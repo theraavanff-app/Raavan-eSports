@@ -926,3 +926,83 @@
     pointer-events: none;
 }
 
+/* FULL TOURNAMENT BADGE */
+
+.full-status,
+.details-full-badge {
+    background: rgba(237, 32, 43, 0.15);
+    color: #ff3945;
+    border: 1px solid rgba(237, 32, 43, 0.45);
+    padding: 6px 11px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+}
+
+.details-full-badge {
+    display: inline-block;
+    margin: 10px 0;
+}
+
+
+/* SLOT PROGRESS */
+
+.card-slot-section {
+    margin-top: 14px;
+}
+
+.card-slot-label,
+.slot-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.card-slot-label strong,
+.slot-label strong {
+    color: #f5bd45;
+}
+
+.card-slot-track,
+.slot-track {
+    width: 100%;
+    height: 7px;
+    background: #292933;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.card-slot-progress,
+.slot-progress {
+    height: 100%;
+    background: #f5bd45;
+    border-radius: 20px;
+    transition: width 0.35s ease;
+}
+
+.full-progress {
+    background: #ed202b;
+}
+
+
+/* FULL JOIN BUTTON */
+
+.full-join-btn,
+.join-btn.full-join-btn,
+.details-join-btn.full-join-btn {
+    background: #34343b !important;
+    color: #ff515a !important;
+    border: 1px solid #ed202b !important;
+    opacity: 0.9;
+    cursor: not-allowed;
+}
+
+.join-btn:disabled,
+.details-join-btn:disabled {
+    cursor: not-allowed;
+}
+
