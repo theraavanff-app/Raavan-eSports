@@ -17,10 +17,18 @@ import {
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-// Admin email
+// =====================================
+// ADMIN CONFIGURATION
+// =====================================
+
 const ADMIN_EMAIL = "the.raavanff@gmail.com";
 
-// HTML elements
+let adminVerified = false;
+
+// =====================================
+// HTML ELEMENTS
+// =====================================
+
 const tournamentForm = document.getElementById("tournamentForm");
 const tournamentList = document.getElementById("tournamentList");
 const tournamentMessage = document.getElementById("tournamentMessage");
@@ -34,9 +42,10 @@ const settingsMessage = document.getElementById("settingsMessage");
 
 const adminLogout = document.getElementById("adminLogout");
 
-let adminVerified = false;
+// =====================================
+// SAFE HTML
+// =====================================
 
-// Safe HTML text
 function escapeHTML(value) {
     return String(value ?? "").replace(/[&<>"']/g, char => ({
         "&": "&amp;",
@@ -47,31 +56,68 @@ function escapeHTML(value) {
     })[char]);
 }
 
-// Check admin login
+// =====================================
+// FIREBASE ADMIN AUTHENTICATION
+// =====================================
+
 onAuthStateChanged(auth, async (user) => {
+
+    console.log(
+        "Firebase Admin Check:",
+        user?.email || "NO USER"
+    );
+
     if (!user) {
-        window.location.href = "./login.html";
+        alert(
+            "Firebase session not found! Please login again using your Firebase admin account."
+        );
+
+        window.location.replace("./login.html");
         return;
     }
 
-    if (user.email !== ADMIN_EMAIL) {
-        alert("Access denied! Admin only.");
+    if (
+        user.email?.toLowerCase() !==
+        ADMIN_EMAIL.toLowerCase()
+    ) {
+        alert(
+            "Wrong Firebase account detected: " +
+            (user.email || "Unknown email")
+        );
+
         await signOut(auth);
-        window.location.href = "./login.html";
+
+        window.location.replace("./login.html");
         return;
     }
 
+    // Admin verified
     adminVerified = true;
+
+    console.log("Raavan eSports Admin Verified!");
 
     await loadTournaments();
     await loadCardSettings();
     await loadBanners();
+
 });
 
-// Logout
+// =====================================
+// ADMIN LOGOUT
+// =====================================
+
 adminLogout.addEventListener("click", async () => {
-    await signOut(auth);
-    window.location.href = "./login.html";
+
+    try {
+        await signOut(auth);
+
+        window.location.replace("./login.html");
+
+    } catch (error) {
+        console.error("Logout error:", error);
+        alert("Logout failed: " + error.message);
+    }
+
 });
 
 // =====================================
@@ -79,35 +125,64 @@ adminLogout.addEventListener("click", async () => {
 // =====================================
 
 tournamentForm.addEventListener("submit", async (e) => {
+
     e.preventDefault();
 
-    if (!adminVerified) return;
+    if (!adminVerified) {
+        alert("Admin verification pending. Please wait.");
+        return;
+    }
 
     tournamentMessage.textContent = "Creating tournament...";
 
     try {
-        const name = document.getElementById("tName").value.trim();
-        const category = document.getElementById("tCategory").value;
-        const prizePool = document.getElementById("tPrize").value.trim();
-        const perKillReward = document.getElementById("tPerKill").value.trim();
-        const booyahPrize = document.getElementById("tBooyah").value.trim();
-        const entryFees = document.getElementById("tEntry").value.trim();
-        const map = document.getElementById("tMap").value.trim();
-        const time = document.getElementById("tTime").value.trim();
 
-        const players = Number(document.getElementById("tPlayers").value || 0);
-        const capacity = Number(document.getElementById("tCapacity").value);
+        const name =
+            document.getElementById("tName").value.trim();
+
+        const category =
+            document.getElementById("tCategory").value;
+
+        const prizePool =
+            document.getElementById("tPrize").value.trim();
+
+        const perKillReward =
+            document.getElementById("tPerKill").value.trim();
+
+        const booyahPrize =
+            document.getElementById("tBooyah").value.trim();
+
+        const entryFees =
+            document.getElementById("tEntry").value.trim();
+
+        const map =
+            document.getElementById("tMap").value.trim();
+
+        const time =
+            document.getElementById("tTime").value.trim();
+
+        const players =
+            Number(document.getElementById("tPlayers").value || 0);
+
+        const capacity =
+            Number(document.getElementById("tCapacity").value);
 
         if (!name || !category || !prizePool || !capacity) {
             throw new Error("Please fill all required fields.");
         }
 
-        if (!Number.isInteger(players) || !Number.isInteger(capacity) ||
-            players < 0 || capacity < 1 || players > capacity) {
+        if (
+            !Number.isInteger(players) ||
+            !Number.isInteger(capacity) ||
+            players < 0 ||
+            capacity < 1 ||
+            players > capacity
+        ) {
             throw new Error("Please enter valid player numbers.");
         }
 
         await addDoc(collection(db, "tournaments"), {
+
             name,
             category,
             prizePool,
@@ -120,111 +195,177 @@ tournamentForm.addEventListener("submit", async (e) => {
             capacity,
             isActive: true,
             createdAt: serverTimestamp()
+
         });
 
         tournamentForm.reset();
+
         document.getElementById("tPlayers").value = 0;
 
-        tournamentMessage.textContent = "Tournament created successfully!";
+        tournamentMessage.textContent =
+            "Tournament created successfully!";
 
         await loadTournaments();
 
     } catch (error) {
-        console.error(error);
-        tournamentMessage.textContent = error.message || "Something went wrong.";
+
+        console.error("Tournament creation error:", error);
+
+        tournamentMessage.textContent =
+            error.message || "Something went wrong.";
+
     }
+
 });
 
-// Load tournaments
+// =====================================
+// LOAD TOURNAMENTS
+// =====================================
+
 async function loadTournaments() {
+
     if (!adminVerified) return;
 
     tournamentList.textContent = "Loading tournaments...";
 
     try {
-        const snapshot = await getDocs(collection(db, "tournaments"));
+
+        const snapshot =
+            await getDocs(collection(db, "tournaments"));
 
         if (snapshot.empty) {
-            tournamentList.innerHTML = "<p>No tournaments found.</p>";
+            tournamentList.innerHTML =
+                "<p>No tournaments found.</p>";
             return;
         }
 
         tournamentList.innerHTML = "";
 
         snapshot.forEach((item) => {
+
             const data = item.data();
 
             const card = document.createElement("div");
+
             card.className = "admin-item";
 
             card.innerHTML = `
                 <div>
                     <h4>${escapeHTML(data.name)}</h4>
-                    <p>${escapeHTML(data.category)} | ${escapeHTML(data.map)}</p>
-                    <p>Players: ${escapeHTML(data.players)} / ${escapeHTML(data.capacity)}</p>
+
+                    <p>
+                        ${escapeHTML(data.category)}
+                        |
+                        ${escapeHTML(data.map)}
+                    </p>
+
+                    <p>
+                        Players:
+                        ${escapeHTML(data.players)}
+                        /
+                        ${escapeHTML(data.capacity)}
+                    </p>
                 </div>
-                <button class="delete-tournament" data-id="${escapeHTML(item.id)}">
+
+                <button
+                    class="delete-tournament"
+                    data-id="${escapeHTML(item.id)}">
                     DELETE
                 </button>
             `;
 
             tournamentList.appendChild(card);
+
         });
 
     } catch (error) {
-        console.error(error);
-        tournamentList.textContent = "Unable to load tournaments.";
+
+        console.error("Tournament loading error:", error);
+
+        tournamentList.textContent =
+            "Unable to load tournaments: " + error.message;
+
     }
+
 }
 
-// Delete tournament
+// =====================================
+// DELETE TOURNAMENT
+// =====================================
+
 tournamentList.addEventListener("click", async (e) => {
+
     const button = e.target.closest(".delete-tournament");
 
     if (!button || !adminVerified) return;
 
     const id = button.dataset.id;
 
-    if (!confirm("Are you sure you want to delete this tournament?")) return;
+    if (!confirm("Are you sure you want to delete this tournament?")) {
+        return;
+    }
 
     try {
+
         await deleteDoc(doc(db, "tournaments", id));
+
         await loadTournaments();
+
     } catch (error) {
-        console.error(error);
+
+        console.error("Tournament delete error:", error);
+
         alert("Tournament delete failed: " + error.message);
+
     }
+
 });
 
 // =====================================
-// TOURNAMENT CARD SETTINGS
+// LOAD CARD SETTINGS
 // =====================================
 
 async function loadCardSettings() {
+
     if (!adminVerified) return;
 
     try {
-        const settingsRef = doc(db, "appSettings", "cardFields");
-        const settingsSnap = await getDoc(settingsRef);
+
+        const settingsRef =
+            doc(db, "appSettings", "cardFields");
+
+        const settingsSnap =
+            await getDoc(settingsRef);
 
         if (!settingsSnap.exists()) return;
 
         const settings = settingsSnap.data();
 
         Object.keys(settings).forEach((key) => {
-            const checkbox = cardSettingsForm.elements.namedItem(key);
+
+            const checkbox =
+                cardSettingsForm.elements.namedItem(key);
 
             if (checkbox && checkbox.type === "checkbox") {
                 checkbox.checked = settings[key] === true;
             }
+
         });
 
     } catch (error) {
+
         console.error("Settings load error:", error);
+
     }
+
 }
 
+// =====================================
+// SAVE CARD SETTINGS
+// =====================================
+
 cardSettingsForm.addEventListener("submit", async (e) => {
+
     e.preventDefault();
 
     if (!adminVerified) return;
@@ -232,6 +373,7 @@ cardSettingsForm.addEventListener("submit", async (e) => {
     settingsMessage.textContent = "Saving settings...";
 
     try {
+
         const fields = [
             "prizePool",
             "perKillReward",
@@ -244,81 +386,123 @@ cardSettingsForm.addEventListener("submit", async (e) => {
         const settings = {};
 
         fields.forEach((field) => {
-            settings[field] = cardSettingsForm.elements.namedItem(field).checked;
+
+            settings[field] =
+                cardSettingsForm.elements.namedItem(field).checked;
+
         });
 
-        await setDoc(doc(db, "appSettings", "cardFields"), settings);
+        await setDoc(
+            doc(db, "appSettings", "cardFields"),
+            settings
+        );
 
-        settingsMessage.textContent = "Settings saved successfully!";
+        settingsMessage.textContent =
+            "Settings saved successfully!";
 
     } catch (error) {
-        console.error(error);
-        settingsMessage.textContent = "Settings save failed: " + error.message;
+
+        console.error("Settings save error:", error);
+
+        settingsMessage.textContent =
+            "Settings save failed: " + error.message;
+
     }
+
 });
 
 // =====================================
-// BANNER MANAGEMENT - URL ONLY
+// ADD BANNER USING IMAGE URL
+// NO FIREBASE STORAGE
 // =====================================
 
 bannerForm.addEventListener("submit", async (e) => {
+
     e.preventDefault();
 
     if (!adminVerified) return;
 
-    const url = document.getElementById("bannerUrl").value.trim();
+    const url =
+        document.getElementById("bannerUrl").value.trim();
 
     bannerMessage.textContent = "Adding banner...";
 
     try {
+
         const parsedUrl = new URL(url);
 
-        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-            throw new Error("Only HTTP or HTTPS image URLs are allowed.");
+        if (
+            parsedUrl.protocol !== "https:" &&
+            parsedUrl.protocol !== "http:"
+        ) {
+            throw new Error(
+                "Only HTTP or HTTPS image URLs are allowed."
+            );
         }
 
         await addDoc(collection(db, "banners"), {
+
             imageUrl: url,
             createdAt: serverTimestamp()
+
         });
 
         bannerForm.reset();
 
-        bannerMessage.textContent = "Banner added successfully!";
+        bannerMessage.textContent =
+            "Banner added successfully!";
 
         await loadBanners();
 
     } catch (error) {
-        console.error(error);
-        bannerMessage.textContent = error.message || "Banner add failed.";
+
+        console.error("Banner add error:", error);
+
+        bannerMessage.textContent =
+            error.message || "Banner add failed.";
+
     }
+
 });
 
-// Load banners
+// =====================================
+// LOAD BANNERS
+// =====================================
+
 async function loadBanners() {
+
     if (!adminVerified) return;
 
     bannerList.textContent = "Loading banners...";
 
     try {
-        const snapshot = await getDocs(collection(db, "banners"));
+
+        const snapshot =
+            await getDocs(collection(db, "banners"));
 
         if (snapshot.empty) {
-            bannerList.innerHTML = "<p>No banners added yet.</p>";
+
+            bannerList.innerHTML =
+                "<p>No banners added yet.</p>";
+
             return;
         }
 
         bannerList.innerHTML = "";
 
         snapshot.forEach((item) => {
+
             const data = item.data();
 
             const card = document.createElement("div");
+
             card.className = "admin-item";
 
             const image = document.createElement("img");
+
             image.src = data.imageUrl;
             image.alt = "Banner preview";
+
             image.style.width = "100%";
             image.style.maxWidth = "260px";
             image.style.height = "100px";
@@ -326,28 +510,43 @@ async function loadBanners() {
             image.style.borderRadius = "10px";
 
             image.onerror = () => {
+
                 image.alt = "Image URL could not be loaded";
                 image.removeAttribute("src");
+
             };
 
-            const deleteButton = document.createElement("button");
+            const deleteButton =
+                document.createElement("button");
+
             deleteButton.textContent = "DELETE";
             deleteButton.className = "delete-banner";
             deleteButton.dataset.id = item.id;
 
             card.appendChild(image);
             card.appendChild(deleteButton);
+
             bannerList.appendChild(card);
+
         });
 
     } catch (error) {
-        console.error(error);
-        bannerList.textContent = "Unable to load banners.";
+
+        console.error("Banner loading error:", error);
+
+        bannerList.textContent =
+            "Unable to load banners: " + error.message;
+
     }
+
 }
 
-// Delete banner
+// =====================================
+// DELETE BANNER
+// =====================================
+
 bannerList.addEventListener("click", async (e) => {
+
     const button = e.target.closest(".delete-banner");
 
     if (!button || !adminVerified) return;
@@ -357,10 +556,17 @@ bannerList.addEventListener("click", async (e) => {
     if (!confirm("Delete this banner?")) return;
 
     try {
+
         await deleteDoc(doc(db, "banners", id));
+
         await loadBanners();
+
     } catch (error) {
-        console.error(error);
+
+        console.error("Banner delete error:", error);
+
         alert("Banner delete failed: " + error.message);
+
     }
+
 });
