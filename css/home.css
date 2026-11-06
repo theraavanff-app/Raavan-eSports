@@ -826,3 +826,71 @@
 }
 
 
+/* TOURNAMENT REWARD LAYOUT */
+
+.tournament-info {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 15px;
+}
+
+.tournament-info .info-box {
+    min-width: 0;
+    padding: 11px;
+    background: #09090d;
+    border: 1px solid #292933;
+    border-radius: 9px;
+}
+
+.tournament-info .info-box small {
+    display: block;
+    color: #9999a8;
+    font-size: 10px;
+    margin-bottom: 6px;
+}
+
+.tournament-info .info-box strong {
+    color: #f5bd45;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.tournament-lower-info {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 9px;
+    border-top: 1px solid #34343e;
+    margin-top: 14px;
+    padding-top: 12px;
+    color: #b8b8c2;
+    font-size: 12px;
+}
+
+
+/* BANNER SLIDER */
+
+.raavan-banner-slider {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    aspect-ratio: 16 / 6;
+    background: #14141b;
+}
+
+.raavan-banner {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity .5s ease;
+}
+
+.raavan-banner.active {
+    opacity: 1;
+}
+
