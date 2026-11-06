@@ -357,106 +357,138 @@ export function initHomepage() {
     // MY MATCHES
     // =================================
 
-    async function renderMyMatches() {
+    
+async function renderMyMatches() {
 
-        const user = auth.currentUser;
+    const user = auth.currentUser;
 
-        if (!user) {
-            matchesPage.innerHTML = `
-                <div class="matches-empty">
-                    <h3>Please Login First</h3>
-                </div>
-            `;
-            return;
-        }
+    if (!user) {
+        matchesPage.innerHTML = `
+            <div class="matches-empty">
+                <h3>Please Login First</h3>
+            </div>
+        `;
+        return;
+    }
+
+    matchesPage.innerHTML = `
+        <div class="matches-heading">
+            <span>RAAVAN ESPORTS</span>
+            <h2>MY MATCHES</h2>
+            <p>Checking your tournaments...</p>
+        </div>
+    `;
+
+    try {
+
+        const q = query(
+            collection(db, "tournamentJoins"),
+            where("uid", "==", user.uid)
+        );
+
+        const snapshot = await getDocs(q);
+
+        const allMatches = snapshot.docs.map(item => ({
+            ...item.data(),
+            joinId: item.id
+        }));
+
+        // CHECK WHETHER EACH TOURNAMENT STILL EXISTS
+        const checkedMatches = await Promise.all(
+            allMatches.map(async item => {
+                try {
+                    const tournamentSnap = await getDoc(
+                        doc(db, "tournaments", String(item.tournamentId))
+                    );
+
+                    if (!tournamentSnap.exists()) {
+                        return null;
+                    }
+
+                    const tournament = tournamentSnap.data();
+
+                    if (tournament.isActive === false) {
+                        return null;
+                    }
+
+                    return item;
+
+                } catch (error) {
+                    console.error("Tournament check error:", error);
+                    throw error;
+                }
+            })
+        );
+
+        const matches = checkedMatches.filter(Boolean);
 
         matchesPage.innerHTML = `
             <div class="matches-heading">
                 <span>RAAVAN ESPORTS</span>
                 <h2>MY MATCHES</h2>
-                <p>Loading your matches...</p>
+                <p>Your joined tournaments in one place.</p>
             </div>
+
+            ${matches.length ? `
+                <div class="my-match-list">
+                    ${matches.map(item => `
+                        <article class="my-match-card">
+
+                            <div class="my-match-top">
+                                <span>${escapeHTML(item.category)}</span>
+                                <span class="my-match-status">● JOINED</span>
+                            </div>
+
+                            <h3>${escapeHTML(item.tournamentName)}</h3>
+
+                            <div class="my-match-info">
+                                <div>
+                                    <small>MAP</small>
+                                    <strong>${escapeHTML(item.map)}</strong>
+                                </div>
+
+                                <div>
+                                    <small>TIME</small>
+                                    <strong>${escapeHTML(item.time)}</strong>
+                                </div>
+                            </div>
+
+                            <button
+                                class="my-match-view"
+                                data-id="${escapeHTML(item.tournamentId)}"
+                            >
+                                VIEW TOURNAMENT
+                            </button>
+
+                        </article>
+                    `).join("")}
+                </div>
+            ` : `
+                <div class="matches-empty">
+                    <div class="empty-match-icon">🏆</div>
+                    <h3>No Matches Joined Yet</h3>
+                    <p>Your joined tournaments will appear here.</p>
+
+                    <button id="exploreMatches">
+                        EXPLORE TOURNAMENTS
+                    </button>
+                </div>
+            `}
         `;
 
-        try {
+    } catch (error) {
 
-            const q = query(
-                collection(db, "tournamentJoins"),
-                where("uid", "==", user.uid)
-            );
+        console.error("My Matches error:", error);
 
-            const snapshot = await getDocs(q);
-
-            const matches = snapshot.docs.map(item => ({
-                ...item.data(),
-                joinId: item.id
-            }));
-
-            matchesPage.innerHTML = `
-                <div class="matches-heading">
-                    <span>RAAVAN ESPORTS</span>
-                    <h2>MY MATCHES</h2>
-                    <p>Your joined tournaments in one place.</p>
-                </div>
-
-                ${matches.length ? `
-                    <div class="my-match-list">
-                        ${matches.map(item => `
-                            <article class="my-match-card">
-
-                                <div class="my-match-top">
-                                    <span>${escapeHTML(item.category)}</span>
-                                    <span class="my-match-status">● JOINED</span>
-                                </div>
-
-                                <h3>${escapeHTML(item.tournamentName)}</h3>
-
-                                <div class="my-match-info">
-                                    <div>
-                                        <small>MAP</small>
-                                        <strong>${escapeHTML(item.map)}</strong>
-                                    </div>
-
-                                    <div>
-                                        <small>TIME</small>
-                                        <strong>${escapeHTML(item.time)}</strong>
-                                    </div>
-                                </div>
-
-                                <button
-                                    class="my-match-view"
-                                    data-id="${escapeHTML(item.tournamentId)}"
-                                >
-                                    VIEW TOURNAMENT
-                                </button>
-
-                            </article>
-                        `).join("")}
-                    </div>
-                ` : `
-                    <div class="matches-empty">
-                        <div class="empty-match-icon">🏆</div>
-                        <h3>No Matches Joined Yet</h3>
-                        <p>Join a tournament and it will appear here.</p>
-                        <button id="exploreMatches">
-                            EXPLORE TOURNAMENTS
-                        </button>
-                    </div>
-                `}
-            `;
-
-        } catch (error) {
-
-            console.error("My Matches error:", error);
-
-            matchesPage.innerHTML = `
-                <div class="matches-empty">
-                    <h3>Could Not Load Matches</h3>
-                    <p>${escapeHTML(error.message)}</p>
-                </div>
-            `;
-        }
+        matchesPage.innerHTML = `
+            <div class="matches-empty">
+                <h3>Could Not Load Matches</h3>
+                <p>${escapeHTML(error.message)}</p>
+            </div>
+        `;
     }
+}
+
 
 
     // =================================
