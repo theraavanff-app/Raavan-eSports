@@ -165,7 +165,8 @@ export function initAuthPage() {
                     throw new Error("Admin account verification failed.");
                 }
 
-                window.location.href = "./admin.html";
+                window.location.href =
+"https://theraavanff-app.github.io/Raavan-eSports/pages/admin.html";
 
             } catch (error) {
                 console.error("Admin login error:", error);
