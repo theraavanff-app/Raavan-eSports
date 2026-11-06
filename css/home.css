@@ -894,3 +894,35 @@
     opacity: 1;
 }
 
+.hero-banner {
+    position: relative;
+    overflow: hidden;
+    background-color: #191920;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: background-image 0.4s ease;
+    min-height: 190px;
+    border-radius: 18px;
+}
+
+.hero-banner h2,
+.hero-banner p,
+.hero-banner .hero-tag,
+.hero-banner .hero-decoration {
+    position: relative;
+    z-index: 2;
+}
+
+.hero-banner::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(0,0,0,.35),
+        transparent
+    );
+    pointer-events: none;
+}
+
