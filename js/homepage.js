@@ -357,138 +357,135 @@ export function initHomepage() {
     // MY MATCHES
     // =================================
 
-    
-async function renderMyMatches() {
+    async function renderMyMatches() {
 
-    const user = auth.currentUser;
+        const user = auth.currentUser;
 
-    if (!user) {
-        matchesPage.innerHTML = `
-            <div class="matches-empty">
-                <h3>Please Login First</h3>
-            </div>
-        `;
-        return;
-    }
-
-    matchesPage.innerHTML = `
-        <div class="matches-heading">
-            <span>RAAVAN ESPORTS</span>
-            <h2>MY MATCHES</h2>
-            <p>Checking your tournaments...</p>
-        </div>
-    `;
-
-    try {
-
-        const q = query(
-            collection(db, "tournamentJoins"),
-            where("uid", "==", user.uid)
-        );
-
-        const snapshot = await getDocs(q);
-
-        const allMatches = snapshot.docs.map(item => ({
-            ...item.data(),
-            joinId: item.id
-        }));
-
-        // CHECK WHETHER EACH TOURNAMENT STILL EXISTS
-        const checkedMatches = await Promise.all(
-            allMatches.map(async item => {
-                try {
-                    const tournamentSnap = await getDoc(
-                        doc(db, "tournaments", String(item.tournamentId))
-                    );
-
-                    if (!tournamentSnap.exists()) {
-                        return null;
-                    }
-
-                    const tournament = tournamentSnap.data();
-
-                    if (tournament.isActive === false) {
-                        return null;
-                    }
-
-                    return item;
-
-                } catch (error) {
-                    console.error("Tournament check error:", error);
-                    throw error;
-                }
-            })
-        );
-
-        const matches = checkedMatches.filter(Boolean);
+        if (!user) {
+            matchesPage.innerHTML = `
+                <div class="matches-empty">
+                    <h3>Please Login First</h3>
+                </div>
+            `;
+            return;
+        }
 
         matchesPage.innerHTML = `
             <div class="matches-heading">
                 <span>RAAVAN ESPORTS</span>
                 <h2>MY MATCHES</h2>
-                <p>Your joined tournaments in one place.</p>
+                <p>Checking your tournaments...</p>
             </div>
+        `;
 
-            ${matches.length ? `
-                <div class="my-match-list">
-                    ${matches.map(item => `
-                        <article class="my-match-card">
+        try {
 
-                            <div class="my-match-top">
-                                <span>${escapeHTML(item.category)}</span>
-                                <span class="my-match-status">● JOINED</span>
-                            </div>
+            const q = query(
+                collection(db, "tournamentJoins"),
+                where("uid", "==", user.uid)
+            );
 
-                            <h3>${escapeHTML(item.tournamentName)}</h3>
+            const snapshot = await getDocs(q);
 
-                            <div class="my-match-info">
-                                <div>
-                                    <small>MAP</small>
-                                    <strong>${escapeHTML(item.map)}</strong>
-                                </div>
+            const allMatches = snapshot.docs.map(item => ({
+                ...item.data(),
+                joinId: item.id
+            }));
 
-                                <div>
-                                    <small>TIME</small>
-                                    <strong>${escapeHTML(item.time)}</strong>
-                                </div>
-                            </div>
+            const checkedMatches = await Promise.all(
+                allMatches.map(async item => {
+                    try {
+                        const tournamentSnap = await getDoc(
+                            doc(db, "tournaments", String(item.tournamentId))
+                        );
 
-                            <button
-                                class="my-match-view"
-                                data-id="${escapeHTML(item.tournamentId)}"
-                            >
-                                VIEW TOURNAMENT
-                            </button>
+                        if (!tournamentSnap.exists()) {
+                            return null;
+                        }
 
-                        </article>
-                    `).join("")}
+                        const tournament = tournamentSnap.data();
+
+                        if (tournament.isActive === false) {
+                            return null;
+                        }
+
+                        return item;
+
+                    } catch (error) {
+                        console.error("Tournament check error:", error);
+                        throw error;
+                    }
+                })
+            );
+
+            const matches = checkedMatches.filter(Boolean);
+
+            matchesPage.innerHTML = `
+                <div class="matches-heading">
+                    <span>RAAVAN ESPORTS</span>
+                    <h2>MY MATCHES</h2>
+                    <p>Your joined tournaments in one place.</p>
                 </div>
-            ` : `
+
+                ${matches.length ? `
+                    <div class="my-match-list">
+                        ${matches.map(item => `
+                            <article class="my-match-card">
+
+                                <div class="my-match-top">
+                                    <span>${escapeHTML(item.category)}</span>
+                                    <span class="my-match-status">● JOINED</span>
+                                </div>
+
+                                <h3>${escapeHTML(item.tournamentName)}</h3>
+
+                                <div class="my-match-info">
+                                    <div>
+                                        <small>MAP</small>
+                                        <strong>${escapeHTML(item.map)}</strong>
+                                    </div>
+
+                                    <div>
+                                        <small>TIME</small>
+                                        <strong>${escapeHTML(item.time)}</strong>
+                                    </div>
+                                </div>
+
+                                <button
+                                    class="my-match-view"
+                                    data-id="${escapeHTML(item.tournamentId)}"
+                                >
+                                    VIEW TOURNAMENT
+                                </button>
+
+                            </article>
+                        `).join("")}
+                    </div>
+                ` : `
+                    <div class="matches-empty">
+                        <div class="empty-match-icon">🏆</div>
+                        <h3>No Matches Joined Yet</h3>
+                        <p>Your joined tournaments will appear here.</p>
+
+                        <button id="exploreMatches">
+                            EXPLORE TOURNAMENTS
+                        </button>
+                    </div>
+                `}
+            `;
+
+        } catch (error) {
+
+            console.error("My Matches error:", error);
+
+            matchesPage.innerHTML = `
                 <div class="matches-empty">
-                    <div class="empty-match-icon">🏆</div>
-                    <h3>No Matches Joined Yet</h3>
-                    <p>Your joined tournaments will appear here.</p>
-
-                    <button id="exploreMatches">
-                        EXPLORE TOURNAMENTS
-                    </button>
+                    <h3>Could Not Load Matches</h3>
+                    <p>${escapeHTML(error.message)}</p>
                 </div>
-            `}
-        `;
-
-    } catch (error) {
-
-        console.error("My Matches error:", error);
-
-        matchesPage.innerHTML = `
-            <div class="matches-empty">
-                <h3>Could Not Load Matches</h3>
-                <p>${escapeHTML(error.message)}</p>
-            </div>
-        `;
+            `;
+        }
     }
-}
-
 
 
     // =================================
@@ -526,7 +523,6 @@ async function renderMyMatches() {
 
             let profileSnap = await getDoc(profileRef);
 
-            // CREATE PROFILE IF MISSING
             if (!profileSnap.exists()) {
 
                 const playerName =
@@ -809,37 +805,109 @@ async function renderMyMatches() {
                         `${id}_${user.uid}`
                     );
 
-                    await runTransaction(db, async transaction => {
+                    const tournamentRef = doc(
+                        db,
+                        "tournaments",
+                        String(id)
+                    );
 
-                        const existingJoin =
-                            await transaction.get(joinRef);
+                    // PLAYER COUNT + JOIN RECORD SYNC
+                    const updatedPlayers = await runTransaction(
+                        db,
+                        async transaction => {
 
-                        if (existingJoin.exists()) {
-                            throw new Error(
-                                "You have already joined this tournament."
-                            );
+                            // Read both documents before writing
+                            const tournamentSnap =
+                                await transaction.get(tournamentRef);
+
+                            const existingJoin =
+                                await transaction.get(joinRef);
+
+                            if (!tournamentSnap.exists()) {
+                                throw new Error(
+                                    "Tournament not found."
+                                );
+                            }
+
+                            if (existingJoin.exists()) {
+                                throw new Error(
+                                    "You have already joined this tournament."
+                                );
+                            }
+
+                            const tournamentData =
+                                tournamentSnap.data();
+
+                            if (tournamentData.isActive === false) {
+                                throw new Error(
+                                    "This tournament is not active."
+                                );
+                            }
+
+                            const currentPlayers =
+                                Number(tournamentData.players || 0);
+
+                            const capacity =
+                                Number(tournamentData.capacity || 0);
+
+                            if (
+                                !Number.isFinite(currentPlayers) ||
+                                !Number.isFinite(capacity) ||
+                                capacity <= 0
+                            ) {
+                                throw new Error(
+                                    "Tournament player count or capacity is invalid."
+                                );
+                            }
+
+                            if (currentPlayers >= capacity) {
+                                throw new Error(
+                                    "Tournament is full."
+                                );
+                            }
+
+                            const newPlayers =
+                                currentPlayers + 1;
+
+                            // Save player join record
+                            transaction.set(joinRef, {
+                                uid: user.uid,
+                                tournamentId: String(id),
+                                tournamentName:
+                                    tournamentData.name || item.name,
+                                category:
+                                    tournamentData.category || item.category,
+                                map:
+                                    tournamentData.map || item.map,
+                                time:
+                                    tournamentData.time || item.time,
+                                capacity: capacity,
+                                createdAt: serverTimestamp()
+                            });
+
+                            // Increase tournament player count
+                            transaction.update(tournamentRef, {
+                                players: newPlayers
+                            });
+
+                            return newPlayers;
                         }
+                    );
 
-                        transaction.set(joinRef, {
-                            uid: user.uid,
-                            tournamentId: String(id),
-                            tournamentName: item.name,
-                            category: item.category,
-                            map: item.map,
-                            time: item.time,
-                            capacity: Number(item.capacity),
-                            createdAt: serverTimestamp()
-                        });
-                    });
+                    // Update local tournament data
+                    item.players = updatedPlayers;
 
+                    // Update joined status
                     joinedTournaments.add(String(id));
 
-                    closeDetails();
-
+                    // Refresh tournament cards
                     renderTournaments(
                         document.querySelector(".category-btn.active")
                             ?.dataset.category || "All"
                     );
+
+                    // Close details and show success
+                    closeDetails();
 
                     showJoinSuccess();
 
@@ -849,8 +917,13 @@ async function renderMyMatches() {
 
                     alert(error.message || "Joining failed.");
 
-                    joinButton.disabled = false;
-                    joinButton.textContent = "CONFIRM JOIN";
+                    const currentJoinButton =
+                        document.getElementById("joinTournament");
+
+                    if (currentJoinButton) {
+                        currentJoinButton.disabled = false;
+                        currentJoinButton.textContent = "CONFIRM JOIN";
+                    }
                 }
             };
     }
