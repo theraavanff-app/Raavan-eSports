@@ -4,6 +4,7 @@ import { auth, db } from "./firebase.js";
 import {
     doc,
     getDoc,
+    setDoc,
     updateDoc,
     collection,
     getDocs,
@@ -185,47 +186,33 @@ export function initHomepage() {
     function renderBanners() {
 
         const bannerContainer =
-            document.getElementById("bannerSlider");
+            document.getElementById("bannerSlider") ||
+            document.querySelector(".hero-banner");
 
-        if (!bannerContainer) {
-            console.warn("Banner slider not found.");
-            return;
-        }
+        if (!bannerContainer) return;
 
         if (bannerTimer) {
             clearInterval(bannerTimer);
             bannerTimer = null;
         }
 
-        // NO ADMIN BANNERS - SHOW DEFAULT HERO
-        if (!banners.length) {
-
-            bannerContainer.style.backgroundImage = "";
-            bannerContainer.style.backgroundSize = "";
-            bannerContainer.style.backgroundPosition = "";
-
-            bannerContainer.innerHTML = `
-                <div class="hero-tag">WELCOME TO THE BATTLE</div>
-                <h2>PLAY SMART.<br>WIN BIG.</h2>
-                <p>Your tournament journey starts here.</p>
-                <div class="hero-decoration">R</div>
-            `;
-
-            return;
-        }
-
-        let currentIndex = 0;
-
-        // KEEP ORIGINAL HERO TEXT
-        bannerContainer.innerHTML = `
+        const heroContent = `
             <div class="hero-tag">WELCOME TO THE BATTLE</div>
             <h2>PLAY SMART.<br>WIN BIG.</h2>
             <p>Your tournament journey starts here.</p>
             <div class="hero-decoration">R</div>
         `;
 
-        function showBanner(index) {
+        bannerContainer.innerHTML = heroContent;
 
+        if (!banners.length) {
+            bannerContainer.style.backgroundImage = "";
+            return;
+        }
+
+        let currentIndex = 0;
+
+        function showBanner(index) {
             const imageUrl = banners[index].imageUrl;
 
             bannerContainer.style.backgroundImage =
@@ -238,16 +225,12 @@ export function initHomepage() {
 
         showBanner(currentIndex);
 
-        // CHANGE IMAGE EVERY 4 SECONDS
         if (banners.length > 1) {
-
             bannerTimer = setInterval(() => {
-
                 currentIndex =
                     (currentIndex + 1) % banners.length;
 
                 showBanner(currentIndex);
-
             }, 4000);
         }
     }
@@ -422,7 +405,7 @@ export function initHomepage() {
                             <article class="my-match-card">
 
                                 <div class="my-match-top">
-                                    <span>${escapeHTML(item.category)} MATCH</span>
+                                    <span>${escapeHTML(item.category)}</span>
                                     <span class="my-match-status">● JOINED</span>
                                 </div>
 
@@ -477,19 +460,29 @@ export function initHomepage() {
 
 
     // =================================
-    // PLAYER PROFILE
+    // PLAYER PROFILE - AUTO FIX
     // =================================
 
     async function renderProfile() {
 
         const user = auth.currentUser;
-        if (!user) return;
+
+        if (!user) {
+            profilePage.innerHTML = `
+                <div class="profile-card">
+                    <h3>Please Login First</h3>
+                    <p>Your session is not available.</p>
+                </div>
+            `;
+            return;
+        }
 
         profilePage.innerHTML = `
             <div class="profile-heading">
                 <span>RAAVAN ESPORTS</span>
                 <h2>PLAYER PROFILE</h2>
             </div>
+
             <div class="profile-card">
                 <h3>Loading Profile...</h3>
             </div>
@@ -497,12 +490,38 @@ export function initHomepage() {
 
         try {
 
-            const profileSnap = await getDoc(
-                doc(db, "users", user.uid)
-            );
+            const profileRef = doc(db, "users", user.uid);
+
+            let profileSnap = await getDoc(profileRef);
+
+            // CREATE PROFILE IF MISSING
+            if (!profileSnap.exists()) {
+
+                const playerName =
+                    user.displayName ||
+                    (user.email
+                        ? user.email.split("@")[0]
+                        : "Player");
+
+                const playerId =
+                    "RAAVAN-" +
+                    user.uid.substring(0, 8).toUpperCase();
+
+                await setDoc(profileRef, {
+                    uid: user.uid,
+                    name: playerName,
+                    email: user.email || "",
+                    playerId: playerId,
+                    createdAt: serverTimestamp()
+                });
+
+                profileSnap = await getDoc(profileRef);
+            }
 
             if (!profileSnap.exists()) {
-                throw new Error("Player profile not found.");
+                throw new Error(
+                    "Profile could not be created. Check Firestore rules."
+                );
             }
 
             const data = profileSnap.data();
@@ -518,37 +537,46 @@ export function initHomepage() {
 
                     <div class="profile-avatar">R</div>
 
-                    <h3>${escapeHTML(data.name)}</h3>
+                    <h3>${escapeHTML(data.name || "Player")}</h3>
 
                     <span class="profile-badge">
                         REGISTERED PLAYER
                     </span>
 
                     <div class="profile-details">
+
                         <div>
                             <small>PLAYER ID</small>
-                            <strong>${escapeHTML(data.playerId)}</strong>
+                            <strong>${escapeHTML(data.playerId || "Not assigned")}</strong>
                         </div>
 
                         <div>
                             <small>EMAIL ADDRESS</small>
-                            <strong>${escapeHTML(data.email)}</strong>
+                            <strong>${escapeHTML(data.email || user.email || "")}</strong>
                         </div>
+
                     </div>
 
                     <form id="editProfileForm">
-                        <label for="newPlayerName">Update Player Name</label>
+
+                        <label for="newPlayerName">
+                            Update Player Name
+                        </label>
 
                         <input
                             type="text"
                             id="newPlayerName"
-                            value="${escapeHTML(data.name)}"
+                            value="${escapeHTML(data.name || "Player")}"
                             maxlength="30"
                             required
                         >
 
-                        <button type="submit">SAVE PROFILE</button>
+                        <button type="submit">
+                            SAVE PROFILE
+                        </button>
+
                         <p id="profileMessage"></p>
+
                     </form>
 
                     <button id="logoutBtn" class="logout-btn">
@@ -566,7 +594,10 @@ export function initHomepage() {
                 <div class="profile-card">
                     <h3>Profile could not load</h3>
                     <p>${escapeHTML(error.message)}</p>
-                    <button id="retryProfile">TRY AGAIN</button>
+
+                    <button id="retryProfile">
+                        TRY AGAIN
+                    </button>
                 </div>
             `;
         }
@@ -902,6 +933,8 @@ export function initHomepage() {
             await renderProfile();
 
         } catch (error) {
+
+            console.error("Profile update error:", error);
 
             message.textContent = error.message;
 
