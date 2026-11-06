@@ -15,10 +15,11 @@ import {
 
 export function initAuthPage() {
 
-    // NORMAL LOGIN
     const loginForm = document.getElementById("loginForm");
 
+    // NORMAL LOGIN
     if (loginForm) {
+
         loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
@@ -33,7 +34,9 @@ export function initAuthPage() {
 
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                window.location.href = "./home.html";
+
+                window.location.href = "../pages/home.html";
+
             } catch (error) {
                 errorBox.textContent = error.message;
                 button.disabled = false;
@@ -43,6 +46,7 @@ export function initAuthPage() {
 
         // AUTHORIZED LOGIN BUTTON
         const adminButton = document.createElement("button");
+
         adminButton.type = "button";
         adminButton.textContent = "AUTHORIZED LOGIN";
 
@@ -126,6 +130,7 @@ export function initAuthPage() {
         });
 
         document.getElementById("adminSubmit").addEventListener("click", () => {
+
             const id = document.getElementById("adminID").value.trim();
             const password = document.getElementById("adminPassword").value;
             const error = document.getElementById("adminError");
@@ -134,7 +139,10 @@ export function initAuthPage() {
             const ADMIN_PASSWORD = "gautam@#";
 
             if (id === ADMIN_ID && password === ADMIN_PASSWORD) {
-                window.location.href = "./admin.html";
+
+                window.location.href =
+                    "/Raavan-eSports/pages/admin.html";
+
             } else {
                 error.textContent = "Incorrect Admin ID or Password!";
             }
@@ -145,6 +153,7 @@ export function initAuthPage() {
     const registerForm = document.getElementById("registerForm");
 
     if (registerForm) {
+
         registerForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
@@ -187,13 +196,13 @@ export function initAuthPage() {
 
                 await setDoc(doc(db, "users", result.user.uid), {
                     uid: result.user.uid,
-                    name: name,
+                    name,
                     email: result.user.email,
-                    playerId: playerId,
+                    playerId,
                     createdAt: serverTimestamp()
                 });
 
-                window.location.href = "./home.html";
+                window.location.href = "../pages/home.html";
 
             } catch (error) {
                 console.error("Registration error:", error);
@@ -203,4 +212,4 @@ export function initAuthPage() {
             }
         });
     }
-            }
+}
