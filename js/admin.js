@@ -1,5 +1,5 @@
 
-import app, { auth, db } from "./firebase.js";
+import { auth, db } from "./firebase.js";
 
 import {
     onAuthStateChanged,
@@ -12,331 +12,355 @@ import {
     getDocs,
     deleteDoc,
     doc,
-    getDoc,
     setDoc,
+    getDoc,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-import {
-    getStorage,
-    ref,
-    uploadBytes,
-    getDownloadURL,
-    deleteObject
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
-
-// Existing Firebase admin account
+// Admin email
 const ADMIN_EMAIL = "the.raavanff@gmail.com";
 
-const storage = getStorage(app);
+// HTML elements
+const tournamentForm = document.getElementById("tournamentForm");
+const tournamentList = document.getElementById("tournamentList");
+const tournamentMessage = document.getElementById("tournamentMessage");
 
-const $ = (id) => document.getElementById(id);
+const bannerForm = document.getElementById("bannerForm");
+const bannerList = document.getElementById("bannerList");
+const bannerMessage = document.getElementById("bannerMessage");
 
-let adminReady = false;
+const cardSettingsForm = document.getElementById("cardSettingsForm");
+const settingsMessage = document.getElementById("settingsMessage");
 
-// AUTH CHECK
+const adminLogout = document.getElementById("adminLogout");
+
+let adminVerified = false;
+
+// Safe HTML text
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+// Check admin login
 onAuthStateChanged(auth, async (user) => {
-    if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
-        alert("Admin account required. Please login with the authorized Firebase account.");
+    if (!user) {
         window.location.href = "./login.html";
         return;
     }
 
-    adminReady = true;
+    if (user.email !== ADMIN_EMAIL) {
+        alert("Access denied! Admin only.");
+        await signOut(auth);
+        window.location.href = "./login.html";
+        return;
+    }
+
+    adminVerified = true;
 
     await loadTournaments();
-    await loadSettings();
+    await loadCardSettings();
     await loadBanners();
 });
 
-// LOGOUT
-$("adminLogout").addEventListener("click", async () => {
+// Logout
+adminLogout.addEventListener("click", async () => {
     await signOut(auth);
     window.location.href = "./login.html";
 });
 
-// ADD TOURNAMENT
-$("tournamentForm").addEventListener("submit", async (e) => {
+// =====================================
+// CREATE TOURNAMENT
+// =====================================
+
+tournamentForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    if (!adminReady) return;
+    if (!adminVerified) return;
 
-    const button = $("addTournamentBtn");
-    const message = $("tournamentMessage");
-
-    const capacity = Number($("tCapacity").value);
-    const players = Number($("tPlayers").value);
-
-    if (capacity < 1 || players < 0 || players > capacity) {
-        message.textContent = "Please check player count and capacity.";
-        return;
-    }
-
-    const tournament = {
-        name: $("tName").value.trim(),
-        category: $("tCategory").value,
-        prizePool: Number($("tPrize").value || 0),
-        perKillReward: Number($("tPerKill").value || 0),
-        booyahPrize: Number($("tBooyah").value || 0),
-        entryFees: Number($("tEntry").value || 0),
-        map: $("tMap").value.trim(),
-        time: $("tTime").value.trim(),
-        players,
-        capacity,
-        isActive: true,
-        createdAt: serverTimestamp()
-    };
-
-    if (!tournament.name || !tournament.category ||
-        !tournament.map || !tournament.time) {
-        message.textContent = "Please fill all required fields.";
-        return;
-    }
-
-    button.disabled = true;
-    button.textContent = "ADDING...";
+    tournamentMessage.textContent = "Creating tournament...";
 
     try {
-        await addDoc(collection(db, "tournaments"), tournament);
+        const name = document.getElementById("tName").value.trim();
+        const category = document.getElementById("tCategory").value;
+        const prizePool = document.getElementById("tPrize").value.trim();
+        const perKillReward = document.getElementById("tPerKill").value.trim();
+        const booyahPrize = document.getElementById("tBooyah").value.trim();
+        const entryFees = document.getElementById("tEntry").value.trim();
+        const map = document.getElementById("tMap").value.trim();
+        const time = document.getElementById("tTime").value.trim();
 
-        $("tournamentForm").reset();
-        $("tPlayers").value = 0;
-        $("tCapacity").value = 48;
+        const players = Number(document.getElementById("tPlayers").value || 0);
+        const capacity = Number(document.getElementById("tCapacity").value);
 
-        message.textContent = "Tournament added successfully!";
+        if (!name || !category || !prizePool || !capacity) {
+            throw new Error("Please fill all required fields.");
+        }
+
+        if (!Number.isInteger(players) || !Number.isInteger(capacity) ||
+            players < 0 || capacity < 1 || players > capacity) {
+            throw new Error("Please enter valid player numbers.");
+        }
+
+        await addDoc(collection(db, "tournaments"), {
+            name,
+            category,
+            prizePool,
+            perKillReward,
+            booyahPrize,
+            entryFees,
+            map,
+            time,
+            players,
+            capacity,
+            isActive: true,
+            createdAt: serverTimestamp()
+        });
+
+        tournamentForm.reset();
+        document.getElementById("tPlayers").value = 0;
+
+        tournamentMessage.textContent = "Tournament created successfully!";
+
         await loadTournaments();
 
     } catch (error) {
         console.error(error);
-        message.textContent = "Could not add tournament: " + error.message;
+        tournamentMessage.textContent = error.message || "Something went wrong.";
     }
-
-    button.disabled = false;
-    button.textContent = "+ ADD TOURNAMENT";
 });
 
-// LOAD TOURNAMENTS
+// Load tournaments
 async function loadTournaments() {
-    if (!adminReady) return;
+    if (!adminVerified) return;
 
-    const list = $("tournamentList");
-    list.textContent = "Loading...";
+    tournamentList.textContent = "Loading tournaments...";
 
     try {
         const snapshot = await getDocs(collection(db, "tournaments"));
-        list.replaceChildren();
 
         if (snapshot.empty) {
-            list.textContent = "No tournaments added yet.";
+            tournamentList.innerHTML = "<p>No tournaments found.</p>";
             return;
         }
+
+        tournamentList.innerHTML = "";
 
         snapshot.forEach((item) => {
             const data = item.data();
 
-            const row = document.createElement("div");
-            row.className = "admin-item";
+            const card = document.createElement("div");
+            card.className = "admin-item";
 
-            const info = document.createElement("div");
+            card.innerHTML = `
+                <div>
+                    <h4>${escapeHTML(data.name)}</h4>
+                    <p>${escapeHTML(data.category)} | ${escapeHTML(data.map)}</p>
+                    <p>Players: ${escapeHTML(data.players)} / ${escapeHTML(data.capacity)}</p>
+                </div>
+                <button class="delete-tournament" data-id="${escapeHTML(item.id)}">
+                    DELETE
+                </button>
+            `;
 
-            const title = document.createElement("strong");
-            title.textContent = data.name || "Untitled Tournament";
-
-            const details = document.createElement("small");
-            details.textContent =
-                `${data.category || ""} • ${data.map || ""} • ${data.players || 0}/${data.capacity || 0}`;
-
-            info.append(title, details);
-
-            const remove = document.createElement("button");
-            remove.className = "delete-btn";
-            remove.textContent = "DELETE";
-
-            remove.addEventListener("click", async () => {
-                if (!confirm(`Delete "${data.name}"?`)) return;
-
-                try {
-                    await deleteDoc(doc(db, "tournaments", item.id));
-                    await loadTournaments();
-                } catch (error) {
-                    alert("Delete failed: " + error.message);
-                }
-            });
-
-            row.append(info, remove);
-            list.appendChild(row);
+            tournamentList.appendChild(card);
         });
 
     } catch (error) {
         console.error(error);
-        list.textContent = "Unable to load tournaments: " + error.message;
+        tournamentList.textContent = "Unable to load tournaments.";
     }
 }
 
-// LOAD CARD DISPLAY SETTINGS
-async function loadSettings() {
-    if (!adminReady) return;
+// Delete tournament
+tournamentList.addEventListener("click", async (e) => {
+    const button = e.target.closest(".delete-tournament");
+
+    if (!button || !adminVerified) return;
+
+    const id = button.dataset.id;
+
+    if (!confirm("Are you sure you want to delete this tournament?")) return;
 
     try {
-        const settingsRef = doc(db, "appSettings", "cardFields");
-        const snapshot = await getDoc(settingsRef);
-
-        if (snapshot.exists()) {
-            const settings = snapshot.data();
-
-            document.querySelectorAll("[data-field]").forEach((input) => {
-                const field = input.dataset.field;
-
-                if (typeof settings[field] === "boolean") {
-                    input.checked = settings[field];
-                }
-            });
-        }
+        await deleteDoc(doc(db, "tournaments", id));
+        await loadTournaments();
     } catch (error) {
-        console.error("Settings load error:", error);
-        $("settingsMessage").textContent = error.message;
-    }
-}
-
-// SAVE CARD DISPLAY SETTINGS
-$("saveDisplaySettings").addEventListener("click", async () => {
-    if (!adminReady) return;
-
-    const settings = {};
-
-    document.querySelectorAll("[data-field]").forEach((input) => {
-        settings[input.dataset.field] = input.checked;
-    });
-
-    try {
-        await setDoc(
-            doc(db, "appSettings", "cardFields"),
-            settings,
-            { merge: true }
-        );
-
-        $("settingsMessage").textContent = "Display settings saved!";
-    } catch (error) {
-        $("settingsMessage").textContent =
-            "Save failed: " + error.message;
+        console.error(error);
+        alert("Tournament delete failed: " + error.message);
     }
 });
 
-// UPLOAD BANNER
-$("bannerForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+// =====================================
+// TOURNAMENT CARD SETTINGS
+// =====================================
 
-    if (!adminReady) return;
-
-    const file = $("bannerImage").files[0];
-    const message = $("bannerMessage");
-    const button = $("uploadBannerBtn");
-
-    if (!file) {
-        message.textContent = "Please select an image.";
-        return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-        message.textContent = "Only image files are allowed.";
-        return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-        message.textContent = "Image must be smaller than 5 MB.";
-        return;
-    }
-
-    button.disabled = true;
-    button.textContent = "UPLOADING...";
+async function loadCardSettings() {
+    if (!adminVerified) return;
 
     try {
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const storagePath = `banners/${Date.now()}-${safeName}`;
-        const imageRef = ref(storage, storagePath);
+        const settingsRef = doc(db, "appSettings", "cardFields");
+        const settingsSnap = await getDoc(settingsRef);
 
-        await uploadBytes(imageRef, file, {
-            contentType: file.type
+        if (!settingsSnap.exists()) return;
+
+        const settings = settingsSnap.data();
+
+        Object.keys(settings).forEach((key) => {
+            const checkbox = cardSettingsForm.elements.namedItem(key);
+
+            if (checkbox && checkbox.type === "checkbox") {
+                checkbox.checked = settings[key] === true;
+            }
         });
 
-        const imageUrl = await getDownloadURL(imageRef);
+    } catch (error) {
+        console.error("Settings load error:", error);
+    }
+}
+
+cardSettingsForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (!adminVerified) return;
+
+    settingsMessage.textContent = "Saving settings...";
+
+    try {
+        const fields = [
+            "prizePool",
+            "perKillReward",
+            "booyahPrize",
+            "entryFees",
+            "map",
+            "playersCount"
+        ];
+
+        const settings = {};
+
+        fields.forEach((field) => {
+            settings[field] = cardSettingsForm.elements.namedItem(field).checked;
+        });
+
+        await setDoc(doc(db, "appSettings", "cardFields"), settings);
+
+        settingsMessage.textContent = "Settings saved successfully!";
+
+    } catch (error) {
+        console.error(error);
+        settingsMessage.textContent = "Settings save failed: " + error.message;
+    }
+});
+
+// =====================================
+// BANNER MANAGEMENT - URL ONLY
+// =====================================
+
+bannerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (!adminVerified) return;
+
+    const url = document.getElementById("bannerUrl").value.trim();
+
+    bannerMessage.textContent = "Adding banner...";
+
+    try {
+        const parsedUrl = new URL(url);
+
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+            throw new Error("Only HTTP or HTTPS image URLs are allowed.");
+        }
 
         await addDoc(collection(db, "banners"), {
-            imageUrl,
-            storagePath,
+            imageUrl: url,
             createdAt: serverTimestamp()
         });
 
-        $("bannerForm").reset();
-        message.textContent = "Banner uploaded successfully!";
+        bannerForm.reset();
+
+        bannerMessage.textContent = "Banner added successfully!";
 
         await loadBanners();
 
     } catch (error) {
         console.error(error);
-        message.textContent = "Upload failed: " + error.message;
+        bannerMessage.textContent = error.message || "Banner add failed.";
     }
-
-    button.disabled = false;
-    button.textContent = "UPLOAD BANNER";
 });
 
-// LOAD BANNERS
+// Load banners
 async function loadBanners() {
-    if (!adminReady) return;
+    if (!adminVerified) return;
 
-    const list = $("bannerList");
-    list.textContent = "Loading banners...";
+    bannerList.textContent = "Loading banners...";
 
     try {
         const snapshot = await getDocs(collection(db, "banners"));
-        list.replaceChildren();
 
         if (snapshot.empty) {
-            list.textContent = "No banners uploaded yet.";
+            bannerList.innerHTML = "<p>No banners added yet.</p>";
             return;
         }
+
+        bannerList.innerHTML = "";
 
         snapshot.forEach((item) => {
             const data = item.data();
 
-            const row = document.createElement("div");
-            row.className = "banner-admin-item";
+            const card = document.createElement("div");
+            card.className = "admin-item";
 
             const image = document.createElement("img");
             image.src = data.imageUrl;
-            image.alt = "Tournament banner";
+            image.alt = "Banner preview";
+            image.style.width = "100%";
+            image.style.maxWidth = "260px";
+            image.style.height = "100px";
+            image.style.objectFit = "cover";
+            image.style.borderRadius = "10px";
 
-            const remove = document.createElement("button");
-            remove.className = "delete-btn";
-            remove.textContent = "DELETE";
+            image.onerror = () => {
+                image.alt = "Image URL could not be loaded";
+                image.removeAttribute("src");
+            };
 
-            remove.addEventListener("click", async () => {
-                if (!confirm("Delete this banner?")) return;
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "DELETE";
+            deleteButton.className = "delete-banner";
+            deleteButton.dataset.id = item.id;
 
-                try {
-                    if (data.storagePath) {
-                        try {
-                            await deleteObject(ref(storage, data.storagePath));
-                        } catch (storageError) {
-                            console.warn("Storage file removal:", storageError);
-                        }
-                    }
-
-                    await deleteDoc(doc(db, "banners", item.id));
-                    await loadBanners();
-
-                } catch (error) {
-                    alert("Banner delete failed: " + error.message);
-                }
-            });
-
-            row.append(image, remove);
-            list.appendChild(row);
+            card.appendChild(image);
+            card.appendChild(deleteButton);
+            bannerList.appendChild(card);
         });
 
     } catch (error) {
         console.error(error);
-        list.textContent = "Unable to load banners: " + error.message;
+        bannerList.textContent = "Unable to load banners.";
     }
 }
+
+// Delete banner
+bannerList.addEventListener("click", async (e) => {
+    const button = e.target.closest(".delete-banner");
+
+    if (!button || !adminVerified) return;
+
+    const id = button.dataset.id;
+
+    if (!confirm("Delete this banner?")) return;
+
+    try {
+        await deleteDoc(doc(db, "banners", id));
+        await loadBanners();
+    } catch (error) {
+        console.error(error);
+        alert("Banner delete failed: " + error.message);
+    }
+});
