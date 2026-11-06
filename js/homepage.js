@@ -11,7 +11,8 @@ import {
     query,
     where,
     runTransaction,
-    serverTimestamp
+    serverTimestamp,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 import {
@@ -34,6 +35,7 @@ let cardSettings = {
 
 let banners = [];
 let bannerTimer = null;
+let unsubscribeTournaments = null;
 
 
 // HTML SAFETY
@@ -48,8 +50,23 @@ function escapeHTML(value) {
 }
 
 
+// TOURNAMENT STATUS
+function getTournamentStatus(item) {
+
+    const players = Number(item.players || 0);
+    const capacity = Number(item.capacity || 0);
+
+    if (capacity > 0 && players >= capacity) {
+        return "full";
+    }
+
+    return "available";
+}
+
+
 // LOAD TOURNAMENTS
 async function loadTournaments() {
+
     const snapshot = await getDocs(
         collection(db, "tournaments")
     );
@@ -63,8 +80,43 @@ async function loadTournaments() {
 }
 
 
+// REAL-TIME TOURNAMENT UPDATES
+function listenToTournaments(renderTournaments) {
+
+    if (unsubscribeTournaments) {
+        unsubscribeTournaments();
+    }
+
+    unsubscribeTournaments = onSnapshot(
+        collection(db, "tournaments"),
+
+        snapshot => {
+
+            tournaments = snapshot.docs
+                .map(item => ({
+                    id: item.id,
+                    ...item.data()
+                }))
+                .filter(item => item.isActive !== false);
+
+            const activeCategory =
+                document.querySelector(".category-btn.active")
+                    ?.dataset.category || "All";
+
+            renderTournaments(activeCategory);
+
+        },
+
+        error => {
+            console.error("Tournament listener error:", error);
+        }
+    );
+}
+
+
 // LOAD JOINED TOURNAMENTS
 async function loadJoinedTournaments() {
+
     joinedTournaments.clear();
 
     const user = auth.currentUser;
@@ -87,6 +139,7 @@ async function loadJoinedTournaments() {
 
 // LOAD CARD SETTINGS
 async function loadCardSettings() {
+
     const snapshot = await getDoc(
         doc(db, "appSettings", "cardFields")
     );
@@ -102,6 +155,7 @@ async function loadCardSettings() {
 
 // LOAD BANNERS
 async function loadBanners() {
+
     const snapshot = await getDocs(
         collection(db, "banners")
     );
@@ -157,8 +211,11 @@ export function initHomepage() {
 
 
     function showJoinSuccess() {
+
         successToast.classList.remove("show");
+
         void successToast.offsetWidth;
+
         successToast.classList.add("show");
 
         setTimeout(() => {
@@ -213,6 +270,7 @@ export function initHomepage() {
         let currentIndex = 0;
 
         function showBanner(index) {
+
             const imageUrl = banners[index].imageUrl;
 
             bannerContainer.style.backgroundImage =
@@ -226,11 +284,14 @@ export function initHomepage() {
         showBanner(currentIndex);
 
         if (banners.length > 1) {
+
             bannerTimer = setInterval(() => {
+
                 currentIndex =
                     (currentIndex + 1) % banners.length;
 
                 showBanner(currentIndex);
+
             }, 4000);
         }
     }
@@ -249,11 +310,13 @@ export function initHomepage() {
             );
 
         if (!filtered.length) {
+
             tournamentList.innerHTML = `
                 <div class="empty-state">
                     No tournaments available.
                 </div>
             `;
+
             return;
         }
 
@@ -261,7 +324,20 @@ export function initHomepage() {
 
             const info = [];
 
+            const players = Number(item.players || 0);
+            const capacity = Number(item.capacity || 0);
+
+            const status = getTournamentStatus(item);
+            const full = status === "full";
+
+            const joined =
+                joinedTournaments.has(String(item.id));
+
+            const remainingSlots =
+                Math.max(0, capacity - players);
+
             if (cardSettings.prizePool) {
+
                 info.push(`
                     <div class="info-box">
                         <small>PRIZE POOL</small>
@@ -271,6 +347,7 @@ export function initHomepage() {
             }
 
             if (cardSettings.perKillReward) {
+
                 info.push(`
                     <div class="info-box">
                         <small>PER KILL REWARD</small>
@@ -280,6 +357,7 @@ export function initHomepage() {
             }
 
             if (cardSettings.booyahPrize) {
+
                 info.push(`
                     <div class="info-box">
                         <small>BOOYAH PRIZE</small>
@@ -289,6 +367,7 @@ export function initHomepage() {
             }
 
             if (cardSettings.entryFees) {
+
                 info.push(`
                     <div class="info-box">
                         <small>ENTRY FEES</small>
@@ -300,30 +379,43 @@ export function initHomepage() {
             const lowerInfo = [];
 
             if (cardSettings.map) {
+
                 lowerInfo.push(`
                     <span>🗺️ ${escapeHTML(item.map)}</span>
                 `);
             }
 
             if (cardSettings.playersCount) {
+
                 lowerInfo.push(`
-                    <span>👥 ${Number(item.players || 0)} / ${Number(item.capacity || 0)}</span>
+                    <span>👥 ${players}/${capacity}</span>
                 `);
             }
 
-            const joined = joinedTournaments.has(String(item.id));
+            const progress =
+                capacity > 0
+                    ? Math.min(100, (players / capacity) * 100)
+                    : 0;
 
             return `
                 <article class="tournament-card">
 
                     <div class="tournament-top">
+
                         <span class="tournament-type">
                             ${escapeHTML(item.category)} MATCH
                         </span>
 
-                        <span class="match-status">
-                            ● Upcoming
-                        </span>
+                        ${full ? `
+                            <span class="match-status full-status">
+                                ● FULL
+                            </span>
+                        ` : `
+                            <span class="match-status">
+                                ● Upcoming
+                            </span>
+                        `}
+
                     </div>
 
                     <h4>${escapeHTML(item.name)}</h4>
@@ -338,17 +430,41 @@ export function initHomepage() {
                         </div>
                     ` : ""}
 
+                    <div class="card-slot-section">
+
+                        <div class="card-slot-label">
+                            <span>${full ? "Tournament Full" : "Available Slots"}</span>
+                            <strong>${full ? "FULL" : remainingSlots}</strong>
+                        </div>
+
+                        <div class="card-slot-track">
+                            <div
+                                class="card-slot-progress ${full ? "full-progress" : ""}"
+                                style="width:${progress}%"
+                            ></div>
+                        </div>
+
+                    </div>
+
                     <div class="join-row">
+
                         <button
-                            class="join-btn"
+                            class="join-btn ${full ? "full-join-btn" : ""}"
                             data-id="${escapeHTML(item.id)}"
                         >
-                            ${joined ? "VIEW TOURNAMENT" : "JOIN TOURNAMENT"}
+                            ${joined
+                                ? "VIEW TOURNAMENT"
+                                : full
+                                    ? "TOURNAMENT FULL"
+                                    : "JOIN TOURNAMENT"
+                            }
                         </button>
+
                     </div>
 
                 </article>
             `;
+
         }).join("");
     }
 
@@ -362,11 +478,13 @@ export function initHomepage() {
         const user = auth.currentUser;
 
         if (!user) {
+
             matchesPage.innerHTML = `
                 <div class="matches-empty">
                     <h3>Please Login First</h3>
                 </div>
             `;
+
             return;
         }
 
@@ -394,27 +512,18 @@ export function initHomepage() {
 
             const checkedMatches = await Promise.all(
                 allMatches.map(async item => {
-                    try {
-                        const tournamentSnap = await getDoc(
-                            doc(db, "tournaments", String(item.tournamentId))
-                        );
 
-                        if (!tournamentSnap.exists()) {
-                            return null;
-                        }
+                    const tournamentSnap = await getDoc(
+                        doc(db, "tournaments", String(item.tournamentId))
+                    );
 
-                        const tournament = tournamentSnap.data();
+                    if (!tournamentSnap.exists()) return null;
 
-                        if (tournament.isActive === false) {
-                            return null;
-                        }
+                    const tournament = tournamentSnap.data();
 
-                        return item;
+                    if (tournament.isActive === false) return null;
 
-                    } catch (error) {
-                        console.error("Tournament check error:", error);
-                        throw error;
-                    }
+                    return item;
                 })
             );
 
@@ -429,7 +538,9 @@ export function initHomepage() {
 
                 ${matches.length ? `
                     <div class="my-match-list">
+
                         ${matches.map(item => `
+
                             <article class="my-match-card">
 
                                 <div class="my-match-top">
@@ -440,6 +551,7 @@ export function initHomepage() {
                                 <h3>${escapeHTML(item.tournamentName)}</h3>
 
                                 <div class="my-match-info">
+
                                     <div>
                                         <small>MAP</small>
                                         <strong>${escapeHTML(item.map)}</strong>
@@ -449,6 +561,7 @@ export function initHomepage() {
                                         <small>TIME</small>
                                         <strong>${escapeHTML(item.time)}</strong>
                                     </div>
+
                                 </div>
 
                                 <button
@@ -459,9 +572,13 @@ export function initHomepage() {
                                 </button>
 
                             </article>
+
                         `).join("")}
+
                     </div>
+
                 ` : `
+
                     <div class="matches-empty">
                         <div class="empty-match-icon">🏆</div>
                         <h3>No Matches Joined Yet</h3>
@@ -471,6 +588,7 @@ export function initHomepage() {
                             EXPLORE TOURNAMENTS
                         </button>
                     </div>
+
                 `}
             `;
 
@@ -489,7 +607,7 @@ export function initHomepage() {
 
 
     // =================================
-    // PLAYER PROFILE - AUTO FIX
+    // PLAYER PROFILE
     // =================================
 
     async function renderProfile() {
@@ -497,12 +615,14 @@ export function initHomepage() {
         const user = auth.currentUser;
 
         if (!user) {
+
             profilePage.innerHTML = `
                 <div class="profile-card">
                     <h3>Please Login First</h3>
                     <p>Your session is not available.</p>
                 </div>
             `;
+
             return;
         }
 
@@ -555,6 +675,7 @@ export function initHomepage() {
             const data = profileSnap.data();
 
             profilePage.innerHTML = `
+
                 <div class="profile-heading">
                     <span>RAAVAN ESPORTS</span>
                     <h2>PLAYER PROFILE</h2>
@@ -656,6 +777,7 @@ export function initHomepage() {
         );
 
         document.querySelectorAll(".nav-btn").forEach(button => {
+
             button.classList.toggle(
                 "active",
                 button.dataset.page === page
@@ -663,6 +785,7 @@ export function initHomepage() {
         });
 
         if (page === "matches") renderMyMatches();
+
         if (page === "profile") renderProfile();
     }
 
@@ -678,16 +801,30 @@ export function initHomepage() {
         );
 
         if (!item) {
+
             alert("This tournament is no longer available.");
+
             return;
         }
 
-        const joined = joinedTournaments.has(String(id));
+        const players = Number(item.players || 0);
+        const capacity = Number(item.capacity || 0);
 
-        const full =
-            Number(item.players || 0) >= Number(item.capacity || 0);
+        const full = getTournamentStatus(item) === "full";
+
+        const joined =
+            joinedTournaments.has(String(id));
+
+        const remainingSlots =
+            Math.max(0, capacity - players);
+
+        const progress =
+            capacity > 0
+                ? Math.min(100, (players / capacity) * 100)
+                : 0;
 
         modal.innerHTML = `
+
             <div class="details-box">
 
                 <div class="details-header">
@@ -702,6 +839,12 @@ export function initHomepage() {
                 </span>
 
                 <h2>${escapeHTML(item.name)}</h2>
+
+                ${full ? `
+                    <span class="details-full-badge">
+                        ● TOURNAMENT FULL
+                    </span>
+                ` : ""}
 
                 <p class="details-subtitle">
                     Your battle. Your glory.
@@ -741,33 +884,38 @@ export function initHomepage() {
 
                     <div class="details-item">
                         <small>PLAYERS</small>
-                        <strong>${Number(item.players || 0)}/${Number(item.capacity || 0)}</strong>
+                        <strong>${players}/${capacity}</strong>
                     </div>
 
                 </div>
 
                 <div class="slot-section">
+
                     <div class="slot-label">
-                        <span>Available Slots</span>
-                        <strong>${Math.max(0, Number(item.capacity || 0) - Number(item.players || 0))}</strong>
+                        <span>${full ? "Tournament Full" : "Available Slots"}</span>
+                        <strong>${full ? "FULL" : remainingSlots}</strong>
                     </div>
 
                     <div class="slot-track">
-                        <div class="slot-progress"
-                            style="width:${Math.min(100, (Number(item.players || 0) / Math.max(1, Number(item.capacity || 1))) * 100)}%">
-                        </div>
+
+                        <div
+                            class="slot-progress ${full ? "full-progress" : ""}"
+                            style="width:${progress}%"
+                        ></div>
+
                     </div>
+
                 </div>
 
                 <button
-                    class="details-join-btn"
+                    class="details-join-btn ${full ? "full-join-btn" : ""}"
                     id="joinTournament"
                     ${joined || full ? "disabled" : ""}
                 >
                     ${joined
                         ? "✓ ALREADY JOINED"
                         : full
-                            ? "SLOTS FULL"
+                            ? "TOURNAMENT FULL"
                             : "CONFIRM JOIN"
                     }
                 </button>
@@ -777,7 +925,9 @@ export function initHomepage() {
 
         modal.classList.remove("hidden");
 
-        document.getElementById("closeModal").onclick = closeDetails;
+        document.getElementById("closeModal").onclick =
+            closeDetails;
+
 
         document.getElementById("joinTournament").onclick =
             async () => {
@@ -789,12 +939,15 @@ export function initHomepage() {
                     return;
                 }
 
-                if (joinedTournaments.has(String(id)) || full) return;
+                if (joinedTournaments.has(String(id)) || full) {
+                    return;
+                }
 
                 const joinButton =
                     document.getElementById("joinTournament");
 
                 joinButton.disabled = true;
+
                 joinButton.textContent = "JOINING...";
 
                 try {
@@ -811,12 +964,11 @@ export function initHomepage() {
                         String(id)
                     );
 
-                    // PLAYER COUNT + JOIN RECORD SYNC
                     const updatedPlayers = await runTransaction(
                         db,
+
                         async transaction => {
 
-                            // Read both documents before writing
                             const tournamentSnap =
                                 await transaction.get(tournamentRef);
 
@@ -824,68 +976,69 @@ export function initHomepage() {
                                 await transaction.get(joinRef);
 
                             if (!tournamentSnap.exists()) {
-                                throw new Error(
-                                    "Tournament not found."
-                                );
+                                throw new Error("Tournament not found.");
                             }
 
                             if (existingJoin.exists()) {
-                                throw new Error(
-                                    "You have already joined this tournament."
-                                );
+                                throw new Error("You have already joined.");
                             }
 
                             const tournamentData =
                                 tournamentSnap.data();
 
                             if (tournamentData.isActive === false) {
-                                throw new Error(
-                                    "This tournament is not active."
-                                );
+                                throw new Error("Tournament is inactive.");
                             }
 
                             const currentPlayers =
                                 Number(tournamentData.players || 0);
 
-                            const capacity =
+                            const maxPlayers =
                                 Number(tournamentData.capacity || 0);
 
                             if (
-                                !Number.isFinite(currentPlayers) ||
-                                !Number.isFinite(capacity) ||
-                                capacity <= 0
+                                !Number.isInteger(currentPlayers) ||
+                                !Number.isInteger(maxPlayers) ||
+                                maxPlayers <= 0
                             ) {
                                 throw new Error(
-                                    "Tournament player count or capacity is invalid."
+                                    "Invalid tournament player count."
                                 );
                             }
 
-                            if (currentPlayers >= capacity) {
+                            if (currentPlayers >= maxPlayers) {
                                 throw new Error(
-                                    "Tournament is full."
+                                    "Tournament is full. No slots available."
                                 );
                             }
 
                             const newPlayers =
                                 currentPlayers + 1;
 
-                            // Save player join record
                             transaction.set(joinRef, {
+
                                 uid: user.uid,
+
                                 tournamentId: String(id),
+
                                 tournamentName:
                                     tournamentData.name || item.name,
+
                                 category:
                                     tournamentData.category || item.category,
+
                                 map:
                                     tournamentData.map || item.map,
+
                                 time:
                                     tournamentData.time || item.time,
-                                capacity: capacity,
+
+                                capacity: maxPlayers,
+
                                 createdAt: serverTimestamp()
+
                             });
 
-                            // Increase tournament player count
                             transaction.update(tournamentRef, {
                                 players: newPlayers
                             });
@@ -894,19 +1047,15 @@ export function initHomepage() {
                         }
                     );
 
-                    // Update local tournament data
                     item.players = updatedPlayers;
 
-                    // Update joined status
                     joinedTournaments.add(String(id));
 
-                    // Refresh tournament cards
                     renderTournaments(
                         document.querySelector(".category-btn.active")
                             ?.dataset.category || "All"
                     );
 
-                    // Close details and show success
                     closeDetails();
 
                     showJoinSuccess();
@@ -921,8 +1070,21 @@ export function initHomepage() {
                         document.getElementById("joinTournament");
 
                     if (currentJoinButton) {
-                        currentJoinButton.disabled = false;
-                        currentJoinButton.textContent = "CONFIRM JOIN";
+
+                        const latestItem = tournaments.find(
+                            t => String(t.id) === String(id)
+                        );
+
+                        const latestFull = latestItem
+                            ? getTournamentStatus(latestItem) === "full"
+                            : false;
+
+                        currentJoinButton.disabled = latestFull;
+
+                        currentJoinButton.textContent =
+                            latestFull
+                                ? "TOURNAMENT FULL"
+                                : "CONFIRM JOIN";
                     }
                 }
             };
@@ -934,14 +1096,21 @@ export function initHomepage() {
     }
 
     modal.addEventListener("click", event => {
-        if (event.target === modal) closeDetails();
+
+        if (event.target === modal) {
+            closeDetails();
+        }
     });
 
 
+    // =================================
     // CATEGORY FILTER
+    // =================================
+
     categoryList.addEventListener("click", event => {
 
         const button = event.target.closest(".category-btn");
+
         if (!button) return;
 
         document.querySelectorAll(".category-btn").forEach(btn => {
@@ -954,18 +1123,24 @@ export function initHomepage() {
     });
 
 
+    // =================================
     // OPEN TOURNAMENT
+    // =================================
+
     tournamentList.addEventListener("click", event => {
 
         const button = event.target.closest(".join-btn");
 
-        if (button) {
-            openDetails(button.dataset.id);
-        }
+        if (!button) return;
+
+        openDetails(button.dataset.id);
     });
 
 
+    // =================================
     // MY MATCHES EVENTS
+    // =================================
+
     matchesPage.addEventListener("click", event => {
 
         const viewButton =
@@ -981,7 +1156,10 @@ export function initHomepage() {
     });
 
 
+    // =================================
     // PROFILE EVENTS
+    // =================================
+
     profilePage.addEventListener("click", async event => {
 
         if (event.target.closest("#logoutBtn")) {
@@ -1001,7 +1179,10 @@ export function initHomepage() {
     });
 
 
+    // =================================
     // EDIT PROFILE
+    // =================================
+
     profilePage.addEventListener("submit", async event => {
 
         if (event.target.id !== "editProfileForm") return;
@@ -1022,6 +1203,7 @@ export function initHomepage() {
             event.target.querySelector('button[type="submit"]');
 
         button.disabled = true;
+
         button.textContent = "SAVING...";
 
         try {
@@ -1044,26 +1226,40 @@ export function initHomepage() {
             message.textContent = error.message;
 
             button.disabled = false;
+
             button.textContent = "SAVE PROFILE";
         }
     });
 
 
+    // =================================
     // WALLET
+    // =================================
+
     document.getElementById("walletBtn")
         ?.addEventListener("click", () => {
-            alert("Demo Points Wallet will be added in the next update.");
+
+            alert(
+                "Demo Points Wallet will be added in the next update."
+            );
         });
 
 
+    // =================================
     // NOTIFICATIONS
+    // =================================
+
     document.getElementById("notificationBtn")
         ?.addEventListener("click", () => {
+
             alert("No new notifications.");
         });
 
 
+    // =================================
     // BOTTOM NAVIGATION
+    // =================================
+
     document.querySelectorAll(".nav-btn").forEach(button => {
 
         button.addEventListener("click", () => {
@@ -1086,7 +1282,9 @@ export function initHomepage() {
     async function initializeHome() {
 
         tournamentList.innerHTML = `
-            <div class="empty-state">Loading tournaments...</div>
+            <div class="empty-state">
+                Loading tournaments...
+            </div>
         `;
 
         try {
@@ -1099,7 +1297,11 @@ export function initHomepage() {
             ]);
 
             renderTournaments();
+
             renderBanners();
+
+            // Automatically update cards when player count changes
+            listenToTournaments(renderTournaments);
 
         } catch (error) {
 
