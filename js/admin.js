@@ -1,4 +1,3 @@
-
 import { auth, db } from "./firebase.js";
 
 import {
@@ -14,6 +13,8 @@ import {
     doc,
     setDoc,
     getDoc,
+    query,
+    where,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
@@ -22,7 +23,6 @@ import {
 // =====================================
 
 const ADMIN_EMAIL = "the.raavanff@gmail.com";
-
 let adminVerified = false;
 
 // =====================================
@@ -41,6 +41,18 @@ const cardSettingsForm = document.getElementById("cardSettingsForm");
 const settingsMessage = document.getElementById("settingsMessage");
 
 const adminLogout = document.getElementById("adminLogout");
+
+const joinedPlayersSection =
+    document.getElementById("joinedPlayersSection");
+
+const joinedTournamentTitle =
+    document.getElementById("joinedTournamentTitle");
+
+const joinedPlayersCount =
+    document.getElementById("joinedPlayersCount");
+
+const joinedPlayersList =
+    document.getElementById("joinedPlayersList");
 
 // =====================================
 // SAFE HTML
@@ -62,36 +74,23 @@ function escapeHTML(value) {
 
 onAuthStateChanged(auth, async (user) => {
 
-    console.log(
-        "Firebase Admin Check:",
-        user?.email || "NO USER"
-    );
+    console.log("Firebase Admin Check:", user?.email || "NO USER");
 
     if (!user) {
-        alert(
-            "Firebase session not found! Please login again using your Firebase admin account."
-        );
-
         window.location.replace("./login.html");
         return;
     }
 
     if (
-        user.email?.toLowerCase() !==
-        ADMIN_EMAIL.toLowerCase()
+        user.email?.toLowerCase() !== ADMIN_EMAIL.toLowerCase()
     ) {
-        alert(
-            "Wrong Firebase account detected: " +
-            (user.email || "Unknown email")
-        );
+        alert("Wrong Firebase account detected.");
 
         await signOut(auth);
-
         window.location.replace("./login.html");
         return;
     }
 
-    // Admin verified
     adminVerified = true;
 
     console.log("Raavan eSports Admin Verified!");
@@ -99,7 +98,6 @@ onAuthStateChanged(auth, async (user) => {
     await loadTournaments();
     await loadCardSettings();
     await loadBanners();
-
 });
 
 // =====================================
@@ -110,14 +108,12 @@ adminLogout.addEventListener("click", async () => {
 
     try {
         await signOut(auth);
-
         window.location.replace("./login.html");
 
     } catch (error) {
         console.error("Logout error:", error);
         alert("Logout failed: " + error.message);
     }
-
 });
 
 // =====================================
@@ -128,38 +124,20 @@ tournamentForm.addEventListener("submit", async (e) => {
 
     e.preventDefault();
 
-    if (!adminVerified) {
-        alert("Admin verification pending. Please wait.");
-        return;
-    }
+    if (!adminVerified) return;
 
     tournamentMessage.textContent = "Creating tournament...";
 
     try {
 
-        const name =
-            document.getElementById("tName").value.trim();
-
-        const category =
-            document.getElementById("tCategory").value;
-
-        const prizePool =
-            document.getElementById("tPrize").value.trim();
-
-        const perKillReward =
-            document.getElementById("tPerKill").value.trim();
-
-        const booyahPrize =
-            document.getElementById("tBooyah").value.trim();
-
-        const entryFees =
-            document.getElementById("tEntry").value.trim();
-
-        const map =
-            document.getElementById("tMap").value.trim();
-
-        const time =
-            document.getElementById("tTime").value.trim();
+        const name = document.getElementById("tName").value.trim();
+        const category = document.getElementById("tCategory").value;
+        const prizePool = document.getElementById("tPrize").value.trim();
+        const perKillReward = document.getElementById("tPerKill").value.trim();
+        const booyahPrize = document.getElementById("tBooyah").value.trim();
+        const entryFees = document.getElementById("tEntry").value.trim();
+        const map = document.getElementById("tMap").value.trim();
+        const time = document.getElementById("tTime").value.trim();
 
         const players =
             Number(document.getElementById("tPlayers").value || 0);
@@ -182,7 +160,6 @@ tournamentForm.addEventListener("submit", async (e) => {
         }
 
         await addDoc(collection(db, "tournaments"), {
-
             name,
             category,
             prizePool,
@@ -195,11 +172,9 @@ tournamentForm.addEventListener("submit", async (e) => {
             capacity,
             isActive: true,
             createdAt: serverTimestamp()
-
         });
 
         tournamentForm.reset();
-
         document.getElementById("tPlayers").value = 0;
 
         tournamentMessage.textContent =
@@ -210,12 +185,9 @@ tournamentForm.addEventListener("submit", async (e) => {
     } catch (error) {
 
         console.error("Tournament creation error:", error);
-
         tournamentMessage.textContent =
             error.message || "Something went wrong.";
-
     }
-
 });
 
 // =====================================
@@ -234,8 +206,7 @@ async function loadTournaments() {
             await getDocs(collection(db, "tournaments"));
 
         if (snapshot.empty) {
-            tournamentList.innerHTML =
-                "<p>No tournaments found.</p>";
+            tournamentList.innerHTML = "<p>No tournaments found.</p>";
             return;
         }
 
@@ -244,7 +215,6 @@ async function loadTournaments() {
         snapshot.forEach((item) => {
 
             const data = item.data();
-
             const card = document.createElement("div");
 
             card.className = "admin-item";
@@ -267,39 +237,62 @@ async function loadTournaments() {
                     </p>
                 </div>
 
-                <button
-                    class="delete-tournament"
-                    data-id="${escapeHTML(item.id)}">
-                    DELETE
-                </button>
+                <div class="admin-tournament-actions">
+
+                    <button
+                        class="view-players"
+                        data-id="${escapeHTML(item.id)}"
+                        data-name="${escapeHTML(data.name)}">
+                        VIEW PLAYERS
+                    </button>
+
+                    <button
+                        class="delete-tournament"
+                        data-id="${escapeHTML(item.id)}">
+                        DELETE
+                    </button>
+
+                </div>
             `;
 
             tournamentList.appendChild(card);
-
         });
 
     } catch (error) {
 
         console.error("Tournament loading error:", error);
-
         tournamentList.textContent =
             "Unable to load tournaments: " + error.message;
-
     }
-
 }
 
 // =====================================
-// DELETE TOURNAMENT
+// TOURNAMENT BUTTONS
+// VIEW PLAYERS + DELETE
 // =====================================
 
 tournamentList.addEventListener("click", async (e) => {
 
-    const button = e.target.closest(".delete-tournament");
+    if (!adminVerified) return;
 
-    if (!button || !adminVerified) return;
+    // VIEW PLAYERS
+    const viewButton = e.target.closest(".view-players");
 
-    const id = button.dataset.id;
+    if (viewButton) {
+
+        const tournamentId = viewButton.dataset.id;
+        const tournamentName = viewButton.dataset.name;
+
+        await loadJoinedPlayers(tournamentId, tournamentName);
+        return;
+    }
+
+    // DELETE TOURNAMENT
+    const deleteButton = e.target.closest(".delete-tournament");
+
+    if (!deleteButton) return;
+
+    const id = deleteButton.dataset.id;
 
     if (!confirm("Are you sure you want to delete this tournament?")) {
         return;
@@ -309,17 +302,136 @@ tournamentList.addEventListener("click", async (e) => {
 
         await deleteDoc(doc(db, "tournaments", id));
 
+        if (
+            joinedTournamentTitle &&
+            joinedTournamentTitle.dataset.id === id
+        ) {
+            joinedPlayersSection.hidden = true;
+        }
+
         await loadTournaments();
 
     } catch (error) {
 
         console.error("Tournament delete error:", error);
-
         alert("Tournament delete failed: " + error.message);
-
     }
-
 });
+
+// =====================================
+// LOAD JOINED PLAYERS
+// =====================================
+
+async function loadJoinedPlayers(tournamentId, tournamentName) {
+
+    if (!adminVerified) return;
+
+    joinedPlayersSection.hidden = false;
+
+    joinedTournamentTitle.textContent =
+        "Tournament: " + tournamentName;
+
+    joinedTournamentTitle.dataset.id = tournamentId;
+
+    joinedPlayersCount.textContent = "Loading...";
+    joinedPlayersList.innerHTML = "<p>Loading players...</p>";
+
+    joinedPlayersSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+
+    try {
+
+        const joinsQuery = query(
+            collection(db, "tournamentJoins"),
+            where("tournamentId", "==", tournamentId)
+        );
+
+        const joinSnapshot = await getDocs(joinsQuery);
+
+        if (joinSnapshot.empty) {
+
+            joinedPlayersCount.textContent = "Total Players: 0";
+
+            joinedPlayersList.innerHTML = `
+                <p class="no-joined-players">
+                    No players have joined this tournament yet.
+                </p>
+            `;
+
+            return;
+        }
+
+        // Fetch player profiles
+        const players = await Promise.all(
+            joinSnapshot.docs.map(async (joinDoc) => {
+
+                const joinData = joinDoc.data();
+
+                if (!joinData.uid) return null;
+
+                const userSnapshot = await getDoc(
+                    doc(db, "users", joinData.uid)
+                );
+
+                if (!userSnapshot.exists()) {
+
+                    return {
+                        name: "Player",
+                        playerId: "Not available"
+                    };
+                }
+
+                const userData = userSnapshot.data();
+
+                return {
+                    name: userData.name || "Player",
+                    playerId: userData.playerId || "Not available"
+                };
+            })
+        );
+
+        const validPlayers = players.filter(Boolean);
+
+        joinedPlayersCount.textContent =
+            "Total Players: " + validPlayers.length;
+
+        joinedPlayersList.innerHTML = "";
+
+        validPlayers.forEach((player, index) => {
+
+            const playerCard = document.createElement("div");
+
+            playerCard.className = "joined-player-item";
+
+            playerCard.innerHTML = `
+                <div class="joined-player-number">
+                    ${index + 1}
+                </div>
+
+                <div class="joined-player-info">
+                    <h4>${escapeHTML(player.name)}</h4>
+                    <p>Player ID: ${escapeHTML(player.playerId)}</p>
+                </div>
+            `;
+
+            joinedPlayersList.appendChild(playerCard);
+        });
+
+    } catch (error) {
+
+        console.error("Joined players loading error:", error);
+
+        joinedPlayersCount.textContent = "";
+
+        joinedPlayersList.innerHTML = `
+            <p class="players-error">
+                Unable to load players: ${escapeHTML(error.message)}
+            </p>
+        `;
+    }
+}
 
 // =====================================
 // LOAD CARD SETTINGS
@@ -331,11 +443,8 @@ async function loadCardSettings() {
 
     try {
 
-        const settingsRef =
-            doc(db, "appSettings", "cardFields");
-
-        const settingsSnap =
-            await getDoc(settingsRef);
+        const settingsRef = doc(db, "appSettings", "cardFields");
+        const settingsSnap = await getDoc(settingsRef);
 
         if (!settingsSnap.exists()) return;
 
@@ -349,15 +458,11 @@ async function loadCardSettings() {
             if (checkbox && checkbox.type === "checkbox") {
                 checkbox.checked = settings[key] === true;
             }
-
         });
 
     } catch (error) {
-
         console.error("Settings load error:", error);
-
     }
-
 }
 
 // =====================================
@@ -389,7 +494,6 @@ cardSettingsForm.addEventListener("submit", async (e) => {
 
             settings[field] =
                 cardSettingsForm.elements.namedItem(field).checked;
-
         });
 
         await setDoc(
@@ -406,14 +510,11 @@ cardSettingsForm.addEventListener("submit", async (e) => {
 
         settingsMessage.textContent =
             "Settings save failed: " + error.message;
-
     }
-
 });
 
 // =====================================
-// ADD BANNER USING IMAGE URL
-// NO FIREBASE STORAGE
+// ADD BANNER
 // =====================================
 
 bannerForm.addEventListener("submit", async (e) => {
@@ -422,8 +523,7 @@ bannerForm.addEventListener("submit", async (e) => {
 
     if (!adminVerified) return;
 
-    const url =
-        document.getElementById("bannerUrl").value.trim();
+    const url = document.getElementById("bannerUrl").value.trim();
 
     bannerMessage.textContent = "Adding banner...";
 
@@ -441,10 +541,8 @@ bannerForm.addEventListener("submit", async (e) => {
         }
 
         await addDoc(collection(db, "banners"), {
-
             imageUrl: url,
             createdAt: serverTimestamp()
-
         });
 
         bannerForm.reset();
@@ -460,9 +558,7 @@ bannerForm.addEventListener("submit", async (e) => {
 
         bannerMessage.textContent =
             error.message || "Banner add failed.";
-
     }
-
 });
 
 // =====================================
@@ -477,14 +573,11 @@ async function loadBanners() {
 
     try {
 
-        const snapshot =
-            await getDocs(collection(db, "banners"));
+        const snapshot = await getDocs(collection(db, "banners"));
 
         if (snapshot.empty) {
 
-            bannerList.innerHTML =
-                "<p>No banners added yet.</p>";
-
+            bannerList.innerHTML = "<p>No banners added yet.</p>";
             return;
         }
 
@@ -495,7 +588,6 @@ async function loadBanners() {
             const data = item.data();
 
             const card = document.createElement("div");
-
             card.className = "admin-item";
 
             const image = document.createElement("img");
@@ -510,14 +602,11 @@ async function loadBanners() {
             image.style.borderRadius = "10px";
 
             image.onerror = () => {
-
                 image.alt = "Image URL could not be loaded";
                 image.removeAttribute("src");
-
             };
 
-            const deleteButton =
-                document.createElement("button");
+            const deleteButton = document.createElement("button");
 
             deleteButton.textContent = "DELETE";
             deleteButton.className = "delete-banner";
@@ -527,7 +616,6 @@ async function loadBanners() {
             card.appendChild(deleteButton);
 
             bannerList.appendChild(card);
-
         });
 
     } catch (error) {
@@ -536,9 +624,7 @@ async function loadBanners() {
 
         bannerList.textContent =
             "Unable to load banners: " + error.message;
-
     }
-
 }
 
 // =====================================
@@ -566,7 +652,5 @@ bannerList.addEventListener("click", async (e) => {
         console.error("Banner delete error:", error);
 
         alert("Banner delete failed: " + error.message);
-
     }
-
 });
