@@ -18,60 +18,53 @@ import {
     updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-// DEMO TOURNAMENTS
-const demoTournaments = [
-    {
-        id: 1,
-        name: "Solo Battle Challenge",
-        category: "Solo",
-        map: "Bermuda",
-        time: "6:00 PM",
-        players: 12,
-        capacity: 48,
-        prize: "Demo Points"
-    },
-    {
-        id: 2,
-        name: "Squad Warrior Cup",
-        category: "Squad",
-        map: "Bermuda",
-        time: "7:00 PM",
-        players: 8,
-        capacity: 48,
-        prize: "Demo Points"
-    },
-    {
-        id: 3,
-        name: "Clash Squad Arena",
-        category: "CS",
-        map: "Random",
-        time: "8:00 PM",
-        players: 4,
-        capacity: 16,
-        prize: "Demo Points"
-    },
-    {
-        id: 4,
-        name: "Duo Survival Match",
-        category: "Duo",
-        map: "Purgatory",
-        time: "9:00 PM",
-        players: 6,
-        capacity: 24,
-        prize: "Demo Points"
-    }
-];
-
 const joinedTournaments = new Set();
 
+let tournaments = [];
+let cardSettings = {
+    prizePool: true,
+    perKillReward: true,
+    booyahPrize: true,
+    entryFees: true,
+    map: true,
+    playersCount: true
+};
 
-// LOAD USER JOINED TOURNAMENTS FROM FIREBASE
+let banners = [];
+
+
+// HTML SAFETY
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+
+// LOAD TOURNAMENTS FROM FIRESTORE
+async function loadTournaments() {
+    const snapshot = await getDocs(
+        collection(db, "tournaments")
+    );
+
+    tournaments = snapshot.docs
+        .map(item => ({
+            id: item.id,
+            ...item.data()
+        }))
+        .filter(item => item.isActive !== false);
+}
+
+
+// LOAD JOINED TOURNAMENTS
 async function loadJoinedTournaments() {
-
-    const user = auth.currentUser;
-
     joinedTournaments.clear();
 
+    const user = auth.currentUser;
     if (!user) return;
 
     const q = query(
@@ -81,11 +74,36 @@ async function loadJoinedTournaments() {
 
     const snapshot = await getDocs(q);
 
-    snapshot.forEach(joinDoc => {
+    snapshot.forEach(item => {
         joinedTournaments.add(
-            String(joinDoc.data().tournamentId)
+            String(item.data().tournamentId)
         );
     });
+}
+
+
+// LOAD HOME CARD SETTINGS
+async function loadCardSettings() {
+    const snapshot = await getDoc(
+        doc(db, "appSettings", "cardFields")
+    );
+
+    if (snapshot.exists()) {
+        cardSettings = {
+            ...cardSettings,
+            ...snapshot.data()
+        };
+    }
+}
+
+
+// LOAD BANNERS FROM FIRESTORE
+async function loadBanners() {
+    const snapshot = await getDocs(
+        collection(db, "banners")
+    );
+
+    banners = snapshot.docs.map(item => item.data());
 }
 
 
@@ -108,26 +126,9 @@ export function initHomepage() {
 
     const homeSections = [...homePage.children];
 
-
-    // ESCAPE HTML
-    function escapeHTML(value) {
-
-        return String(value ?? "").replace(/[&<>"']/g, char => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;"
-        })[char]);
-    }
-
-
-    // TOURNAMENT MODAL
     const modal = document.createElement("div");
-
     modal.id = "tournamentModal";
     modal.className = "tournament-modal hidden";
-
     document.body.appendChild(modal);
 
 
@@ -148,11 +149,8 @@ export function initHomepage() {
 
 
     function showJoinSuccess() {
-
         successToast.classList.remove("show");
-
         void successToast.offsetWidth;
-
         successToast.classList.add("show");
 
         setTimeout(() => {
@@ -163,106 +161,192 @@ export function initHomepage() {
 
     // MY MATCHES PAGE
     const matchesPage = document.createElement("section");
-
     matchesPage.className = "matches-page hidden";
-
     homePage.appendChild(matchesPage);
 
 
     // PROFILE PAGE
     const profilePage = document.createElement("section");
-
     profilePage.className = "profile-page hidden";
-
     homePage.appendChild(profilePage);
+
+
+    // BANNER SLIDER
+    function renderBanners() {
+
+        const bannerContainer =
+            document.querySelector(
+                "#bannerSlider, .banner-slider, .banner-container, .home-banner"
+            );
+
+        if (!bannerContainer) {
+            console.warn(
+                "Banner container not found in home.html."
+            );
+            return;
+        }
+
+        if (!banners.length) {
+            bannerContainer.innerHTML = "";
+            return;
+        }
+
+        bannerContainer.innerHTML = `
+            <div class="raavan-banner-slider">
+                ${banners.map((banner, index) => `
+                    <img
+                        class="raavan-banner ${index === 0 ? "active" : ""}"
+                        src="${escapeHTML(banner.imageUrl)}"
+                        alt="Raavan eSports banner"
+                        loading="${index === 0 ? "eager" : "lazy"}"
+                    >
+                `).join("")}
+            </div>
+        `;
+
+        const images = bannerContainer.querySelectorAll(
+            ".raavan-banner"
+        );
+
+        if (images.length > 1) {
+            let current = 0;
+
+            setInterval(() => {
+                images[current].classList.remove("active");
+
+                current = (current + 1) % images.length;
+
+                images[current].classList.add("active");
+            }, 3500);
+        }
+    }
 
 
     // RENDER TOURNAMENTS
     function renderTournaments(category = "All") {
 
         const filtered = category === "All"
-            ? demoTournaments
-            : demoTournaments.filter(item =>
+            ? tournaments
+            : tournaments.filter(item =>
                 item.category === category
             );
 
         if (!filtered.length) {
-
             tournamentList.innerHTML = `
                 <div class="empty-state">
                     No tournaments available.
                 </div>
             `;
-
             return;
         }
 
-        tournamentList.innerHTML = filtered.map(item => `
+        tournamentList.innerHTML = filtered.map(item => {
 
-            <article class="tournament-card">
+            const info = [];
 
-                <div class="tournament-top">
-
-                    <span class="tournament-type">
-                        ${escapeHTML(item.category)} MATCH
-                    </span>
-
-                    <span class="match-status">
-                        ● Upcoming
-                    </span>
-
-                </div>
-
-                <h4>${escapeHTML(item.name)}</h4>
-
-                <div class="tournament-info">
-
+            if (cardSettings.prizePool) {
+                info.push(`
                     <div class="info-box">
-                        <small>MAP</small>
-                        <strong>${escapeHTML(item.map)}</strong>
+                        <small>PRIZE POOL</small>
+                        <strong>${escapeHTML(item.prizePool ?? 0)} COINS</strong>
+                    </div>
+                `);
+            }
+
+            if (cardSettings.perKillReward) {
+                info.push(`
+                    <div class="info-box">
+                        <small>PER KILL REWARD</small>
+                        <strong>${escapeHTML(item.perKillReward ?? 0)} COINS</strong>
+                    </div>
+                `);
+            }
+
+            if (cardSettings.booyahPrize) {
+                info.push(`
+                    <div class="info-box">
+                        <small>BOOYAH PRIZE</small>
+                        <strong>${escapeHTML(item.booyahPrize ?? 0)} COINS</strong>
+                    </div>
+                `);
+            }
+
+            if (cardSettings.entryFees) {
+                info.push(`
+                    <div class="info-box">
+                        <small>ENTRY FEES</small>
+                        <strong>${escapeHTML(item.entryFees ?? 0)} COINS</strong>
+                    </div>
+                `);
+            }
+
+            const lowerInfo = [];
+
+            if (cardSettings.map) {
+                lowerInfo.push(`
+                    <span>🗺️ ${escapeHTML(item.map)}</span>
+                `);
+            }
+
+            if (cardSettings.playersCount) {
+                lowerInfo.push(`
+                    <span>👥 ${Number(item.players || 0)} / ${Number(item.capacity || 0)}</span>
+                `);
+            }
+
+            const joined = joinedTournaments.has(String(item.id));
+
+            return `
+                <article class="tournament-card">
+
+                    <div class="tournament-top">
+                        <span class="tournament-type">
+                            ${escapeHTML(item.category)} MATCH
+                        </span>
+
+                        <span class="match-status">
+                            ● Upcoming
+                        </span>
                     </div>
 
-                    <div class="info-box">
-                        <small>TIME</small>
-                        <strong>${escapeHTML(item.time)}</strong>
+                    <h4>${escapeHTML(item.name)}</h4>
+
+                    <div class="tournament-info">
+                        ${info.join("")}
                     </div>
 
-                    <div class="info-box">
-                        <small>PLAYERS</small>
-                        <strong>
-                            ${item.players} / ${item.capacity}
-                        </strong>
+                    ${lowerInfo.length ? `
+                        <div class="tournament-lower-info">
+                            ${lowerInfo.join("")}
+                        </div>
+                    ` : ""}
+
+                    <div class="join-row">
+                        <button
+                            class="join-btn"
+                            data-id="${escapeHTML(item.id)}"
+                        >
+                            ${joined ? "VIEW TOURNAMENT" : "JOIN TOURNAMENT"}
+                        </button>
                     </div>
 
-                </div>
-
-                <div class="join-row">
-
-                    <button class="join-btn" data-id="${item.id}">
-                        VIEW TOURNAMENT
-                    </button>
-
-                </div>
-
-            </article>
-
-        `).join("");
+                </article>
+            `;
+        }).join("");
     }
 
 
-    // MY MATCHES FROM FIREBASE
+    // MY MATCHES
     async function renderMyMatches() {
 
         const user = auth.currentUser;
 
         if (!user) {
-
             matchesPage.innerHTML = `
                 <div class="matches-empty">
                     <h3>Please Login First</h3>
                 </div>
             `;
-
             return;
         }
 
@@ -275,7 +359,6 @@ export function initHomepage() {
         `;
 
         try {
-
             const q = query(
                 collection(db, "tournamentJoins"),
                 where("uid", "==", user.uid)
@@ -283,12 +366,12 @@ export function initHomepage() {
 
             const snapshot = await getDocs(q);
 
-            const matches = snapshot.docs.map(item =>
-                item.data()
-            );
+            const matches = snapshot.docs.map(item => ({
+                ...item.data(),
+                joinId: item.id
+            }));
 
             matchesPage.innerHTML = `
-
                 <div class="matches-heading">
                     <span>RAAVAN ESPORTS</span>
                     <h2>MY MATCHES</h2>
@@ -296,29 +379,18 @@ export function initHomepage() {
                 </div>
 
                 ${matches.length ? `
-
                     <div class="my-match-list">
-
                         ${matches.map(item => `
-
                             <article class="my-match-card">
 
                                 <div class="my-match-top">
-                                    <span>
-                                        ${escapeHTML(item.category)} MATCH
-                                    </span>
-
-                                    <span class="my-match-status">
-                                        ● JOINED
-                                    </span>
+                                    <span>${escapeHTML(item.category)} MATCH</span>
+                                    <span class="my-match-status">● JOINED</span>
                                 </div>
 
-                                <h3>
-                                    ${escapeHTML(item.tournamentName)}
-                                </h3>
+                                <h3>${escapeHTML(item.tournamentName)}</h3>
 
                                 <div class="my-match-info">
-
                                     <div>
                                         <small>MAP</small>
                                         <strong>${escapeHTML(item.map)}</strong>
@@ -328,39 +400,31 @@ export function initHomepage() {
                                         <small>TIME</small>
                                         <strong>${escapeHTML(item.time)}</strong>
                                     </div>
-
                                 </div>
 
+                                <button
+                                    class="my-match-view"
+                                    data-id="${escapeHTML(item.tournamentId)}"
+                                >
+                                    VIEW TOURNAMENT
+                                </button>
+
                             </article>
-
                         `).join("")}
-
                     </div>
-
                 ` : `
-
                     <div class="matches-empty">
-
                         <div class="empty-match-icon">🏆</div>
-
                         <h3>No Matches Joined Yet</h3>
-
-                        <p>
-                            Join a tournament and it will appear here.
-                        </p>
-
+                        <p>Join a tournament and it will appear here.</p>
                         <button id="exploreMatches">
                             EXPLORE TOURNAMENTS
                         </button>
-
                     </div>
-
                 `}
-
             `;
 
         } catch (error) {
-
             console.error("My Matches error:", error);
 
             matchesPage.innerHTML = `
@@ -377,7 +441,6 @@ export function initHomepage() {
     async function renderProfile() {
 
         const user = auth.currentUser;
-
         if (!user) return;
 
         profilePage.innerHTML = `
@@ -385,18 +448,15 @@ export function initHomepage() {
                 <span>RAAVAN ESPORTS</span>
                 <h2>PLAYER PROFILE</h2>
             </div>
-
             <div class="profile-card">
-                <div class="profile-avatar">R</div>
                 <h3>Loading Profile...</h3>
             </div>
         `;
 
         try {
-
-            const profileRef = doc(db, "users", user.uid);
-
-            const profileSnap = await getDoc(profileRef);
+            const profileSnap = await getDoc(
+                doc(db, "users", user.uid)
+            );
 
             if (!profileSnap.exists()) {
                 throw new Error("Player profile not found.");
@@ -405,7 +465,6 @@ export function initHomepage() {
             const data = profileSnap.data();
 
             profilePage.innerHTML = `
-
                 <div class="profile-heading">
                     <span>RAAVAN ESPORTS</span>
                     <h2>PLAYER PROFILE</h2>
@@ -423,7 +482,6 @@ export function initHomepage() {
                     </span>
 
                     <div class="profile-details">
-
                         <div>
                             <small>PLAYER ID</small>
                             <strong>${escapeHTML(data.playerId)}</strong>
@@ -433,14 +491,10 @@ export function initHomepage() {
                             <small>EMAIL ADDRESS</small>
                             <strong>${escapeHTML(data.email)}</strong>
                         </div>
-
                     </div>
 
                     <form id="editProfileForm">
-
-                        <label for="newPlayerName">
-                            Update Player Name
-                        </label>
+                        <label for="newPlayerName">Update Player Name</label>
 
                         <input
                             type="text"
@@ -450,12 +504,8 @@ export function initHomepage() {
                             required
                         >
 
-                        <button type="submit">
-                            SAVE PROFILE
-                        </button>
-
+                        <button type="submit">SAVE PROFILE</button>
                         <p id="profileMessage"></p>
-
                     </form>
 
                     <button id="logoutBtn" class="logout-btn">
@@ -466,16 +516,13 @@ export function initHomepage() {
             `;
 
         } catch (error) {
-
-            console.error("Profile loading error:", error);
+            console.error("Profile error:", error);
 
             profilePage.innerHTML = `
                 <div class="profile-card">
                     <h3>Profile could not load</h3>
                     <p>${escapeHTML(error.message)}</p>
-                    <button id="retryProfile">
-                        TRY AGAIN
-                    </button>
+                    <button id="retryProfile">TRY AGAIN</button>
                 </div>
             `;
         }
@@ -486,7 +533,6 @@ export function initHomepage() {
     function showPage(page) {
 
         homeSections.forEach(section => {
-
             section.classList.toggle(
                 "hidden",
                 page !== "home"
@@ -504,46 +550,38 @@ export function initHomepage() {
         );
 
         document.querySelectorAll(".nav-btn").forEach(button => {
-
             button.classList.toggle(
                 "active",
                 button.dataset.page === page
             );
         });
 
-        if (page === "matches") {
-            renderMyMatches();
-        }
-
-        if (page === "profile") {
-            renderProfile();
-        }
+        if (page === "matches") renderMyMatches();
+        if (page === "profile") renderProfile();
     }
 
 
     // TOURNAMENT DETAILS
     function openDetails(id) {
 
-        const item = demoTournaments.find(t =>
-            t.id === id
+        const item = tournaments.find(t =>
+            String(t.id) === String(id)
         );
 
-        if (!item) return;
+        if (!item) {
+            alert("This tournament is no longer available.");
+            return;
+        }
 
         const joined = joinedTournaments.has(String(id));
-
-        const full = item.players >= item.capacity;
+        const full = Number(item.players || 0) >= Number(item.capacity || 0);
 
         modal.innerHTML = `
-
             <div class="details-box">
 
                 <div class="details-header">
                     <span>TOURNAMENT DETAILS</span>
-
-                    <button class="close-modal" id="closeModal">
-                        ✕
-                    </button>
+                    <button class="close-modal" id="closeModal">✕</button>
                 </div>
 
                 <div class="details-logo">R</div>
@@ -561,8 +599,23 @@ export function initHomepage() {
                 <div class="details-grid">
 
                     <div class="details-item">
-                        <small>GAME MODE</small>
-                        <strong>${escapeHTML(item.category)}</strong>
+                        <small>PRIZE POOL</small>
+                        <strong>${escapeHTML(item.prizePool ?? 0)} COINS</strong>
+                    </div>
+
+                    <div class="details-item">
+                        <small>PER KILL REWARD</small>
+                        <strong>${escapeHTML(item.perKillReward ?? 0)} COINS</strong>
+                    </div>
+
+                    <div class="details-item">
+                        <small>BOOYAH PRIZE</small>
+                        <strong>${escapeHTML(item.booyahPrize ?? 0)} COINS</strong>
+                    </div>
+
+                    <div class="details-item">
+                        <small>ENTRY FEES</small>
+                        <strong>${escapeHTML(item.entryFees ?? 0)} COINS</strong>
                     </div>
 
                     <div class="details-item">
@@ -576,51 +629,23 @@ export function initHomepage() {
                     </div>
 
                     <div class="details-item">
-                        <small>ENTRY</small>
-                        <strong>FREE</strong>
-                    </div>
-
-                    <div class="details-item">
                         <small>PLAYERS</small>
-                        <strong>${item.players}/${item.capacity}</strong>
-                    </div>
-
-                    <div class="details-item">
-                        <small>REWARD TYPE</small>
-                        <strong>${escapeHTML(item.prize)}</strong>
+                        <strong>${Number(item.players || 0)}/${Number(item.capacity || 0)}</strong>
                     </div>
 
                 </div>
 
                 <div class="slot-section">
-
                     <div class="slot-label">
                         <span>Available Slots</span>
-                        <strong>
-                            ${Math.max(0, item.capacity - item.players)}
-                        </strong>
+                        <strong>${Math.max(0, Number(item.capacity || 0) - Number(item.players || 0))}</strong>
                     </div>
 
                     <div class="slot-track">
-                        <div
-                            class="slot-progress"
-                            style="width:${Math.min(100, (item.players / item.capacity) * 100)}%"
-                        ></div>
+                        <div class="slot-progress"
+                            style="width:${Math.min(100, (Number(item.players || 0) / Math.max(1, Number(item.capacity || 1))) * 100)}%">
+                        </div>
                     </div>
-
-                </div>
-
-                <div class="players-section">
-
-                    <h3>Joined Players</h3>
-
-                    <p>
-                        ${joined
-                            ? "✓ You have joined this tournament."
-                            : "Join this tournament to reserve your spot."
-                        }
-                    </p>
-
                 </div>
 
                 <button
@@ -632,25 +657,17 @@ export function initHomepage() {
                         ? "✓ ALREADY JOINED"
                         : full
                             ? "SLOTS FULL"
-                            : "JOIN TOURNAMENT"
+                            : "CONFIRM JOIN"
                     }
                 </button>
-
-                <p class="demo-note">
-                    Demo tournament • No cash entry •
-                    Demo Points have no cash value.
-                </p>
 
             </div>
         `;
 
         modal.classList.remove("hidden");
 
-        document.getElementById("closeModal").onclick =
-            closeDetails;
+        document.getElementById("closeModal").onclick = closeDetails;
 
-
-        // FIREBASE JOINING
         document.getElementById("joinTournament").onclick =
             async () => {
 
@@ -661,19 +678,14 @@ export function initHomepage() {
                     return;
                 }
 
-                if (
-                    joinedTournaments.has(String(id)) ||
-                    item.players >= item.capacity
-                ) return;
+                if (joinedTournaments.has(String(id)) || full) return;
 
-                const joinButton =
-                    document.getElementById("joinTournament");
+                const joinButton = document.getElementById("joinTournament");
 
                 joinButton.disabled = true;
                 joinButton.textContent = "JOINING...";
 
                 try {
-
                     const joinRef = doc(
                         db,
                         "tournamentJoins",
@@ -682,8 +694,7 @@ export function initHomepage() {
 
                     await runTransaction(db, async transaction => {
 
-                        const existingJoin =
-                            await transaction.get(joinRef);
+                        const existingJoin = await transaction.get(joinRef);
 
                         if (existingJoin.exists()) {
                             throw new Error(
@@ -692,74 +703,44 @@ export function initHomepage() {
                         }
 
                         transaction.set(joinRef, {
-
                             uid: user.uid,
-
                             tournamentId: String(id),
-
                             tournamentName: item.name,
-
                             category: item.category,
-
                             map: item.map,
-
                             time: item.time,
-
-                            capacity: item.capacity,
-
+                            capacity: Number(item.capacity),
                             createdAt: serverTimestamp()
-
                         });
                     });
 
                     joinedTournaments.add(String(id));
 
-                    // Temporary display update only.
-                    // Global player count will be connected
-                    // after tournaments are migrated to Firestore.
-                    item.players++;
-
-                    const activeCategory =
-                        document.querySelector(
-                            ".category-btn.active"
-                        )?.dataset.category || "All";
-
-                    renderTournaments(activeCategory);
-
-                    openDetails(id);
+                    closeDetails();
+                    renderTournaments(
+                        document.querySelector(".category-btn.active")
+                            ?.dataset.category || "All"
+                    );
 
                     showJoinSuccess();
 
                 } catch (error) {
-
-                    console.error(
-                        "Tournament joining error:",
-                        error
-                    );
-
-                    alert(
-                        error.message ||
-                        "Joining failed. Please try again."
-                    );
+                    console.error("Joining error:", error);
+                    alert(error.message || "Joining failed.");
 
                     joinButton.disabled = false;
-
-                    joinButton.textContent = "JOIN TOURNAMENT";
+                    joinButton.textContent = "CONFIRM JOIN";
                 }
             };
     }
 
 
-    // CLOSE MODAL
     function closeDetails() {
         modal.classList.add("hidden");
     }
 
     modal.addEventListener("click", event => {
-
-        if (event.target === modal) {
-            closeDetails();
-        }
+        if (event.target === modal) closeDetails();
     });
 
 
@@ -767,7 +748,6 @@ export function initHomepage() {
     categoryList.addEventListener("click", event => {
 
         const button = event.target.closest(".category-btn");
-
         if (!button) return;
 
         document.querySelectorAll(".category-btn").forEach(btn => {
@@ -775,7 +755,6 @@ export function initHomepage() {
         });
 
         button.classList.add("active");
-
         renderTournaments(button.dataset.category);
     });
 
@@ -784,21 +763,17 @@ export function initHomepage() {
     tournamentList.addEventListener("click", event => {
 
         const button = event.target.closest(".join-btn");
-
-        if (button) {
-            openDetails(Number(button.dataset.id));
-        }
+        if (button) openDetails(button.dataset.id);
     });
 
 
     // MY MATCHES EVENTS
     matchesPage.addEventListener("click", event => {
 
-        const viewButton =
-            event.target.closest(".my-match-view");
+        const viewButton = event.target.closest(".my-match-view");
 
         if (viewButton) {
-            openDetails(Number(viewButton.dataset.id));
+            openDetails(viewButton.dataset.id);
         }
 
         if (event.target.closest("#exploreMatches")) {
@@ -812,18 +787,12 @@ export function initHomepage() {
 
         if (event.target.closest("#logoutBtn")) {
 
-            const confirmed = confirm(
-                "Are you sure you want to logout?"
-            );
+            if (!confirm("Are you sure you want to logout?")) return;
 
-            if (confirmed) {
-
-                try {
-                    await signOut(auth);
-                } catch (error) {
-                    alert("Logout failed. Please try again.");
-                    console.error(error);
-                }
+            try {
+                await signOut(auth);
+            } catch (error) {
+                alert("Logout failed: " + error.message);
             }
         }
 
@@ -841,36 +810,18 @@ export function initHomepage() {
         event.preventDefault();
 
         const user = auth.currentUser;
-
-        const name = document
-            .getElementById("newPlayerName")
-            .value.trim();
-
-        const message =
-            document.getElementById("profileMessage");
+        const name = document.getElementById("newPlayerName").value.trim();
+        const message = document.getElementById("profileMessage");
 
         if (!user || !name) return;
 
-        if (name.length > 30) {
+        const button = event.target.querySelector('button[type="submit"]');
 
-            message.textContent =
-                "Name must be under 30 characters.";
-
-            return;
-        }
-
-        const saveButton =
-            event.target.querySelector('button[type="submit"]');
-
-        saveButton.disabled = true;
-        saveButton.textContent = "SAVING...";
+        button.disabled = true;
+        button.textContent = "SAVING...";
 
         try {
-
-            await updateDoc(
-                doc(db, "users", user.uid),
-                { name }
-            );
+            await updateDoc(doc(db, "users", user.uid), { name });
 
             await updateProfile(user, {
                 displayName: name
@@ -879,32 +830,23 @@ export function initHomepage() {
             await renderProfile();
 
         } catch (error) {
-
-            console.error("Profile update error:", error);
-
             message.textContent = error.message;
-            message.style.color = "#ff626c";
-
-            saveButton.disabled = false;
-            saveButton.textContent = "SAVE PROFILE";
+            button.disabled = false;
+            button.textContent = "SAVE PROFILE";
         }
     });
 
 
-    // WALLET BUTTON
+    // WALLET
     document.getElementById("walletBtn")
         ?.addEventListener("click", () => {
-
-            alert(
-                "Demo Points Wallet will be added in the next update."
-            );
+            alert("Demo Points Wallet will be added in the next update.");
         });
 
 
-    // NOTIFICATION BUTTON
+    // NOTIFICATIONS
     document.getElementById("notificationBtn")
         ?.addEventListener("click", () => {
-
             alert("No new notifications.");
         });
 
@@ -913,14 +855,9 @@ export function initHomepage() {
     document.querySelectorAll(".nav-btn").forEach(button => {
 
         button.addEventListener("click", () => {
-
             const page = button.dataset.page;
 
-            if (
-                page === "home" ||
-                page === "matches" ||
-                page === "profile"
-            ) {
+            if (["home", "matches", "profile"].includes(page)) {
                 showPage(page);
             } else {
                 alert("This page is coming soon.");
@@ -929,18 +866,35 @@ export function initHomepage() {
     });
 
 
-    // INITIAL LOAD
-    renderTournaments();
+    // INITIAL FIREBASE LOAD
+    async function initializeHome() {
 
-    loadJoinedTournaments()
-        .then(() => {
+        tournamentList.innerHTML = `
+            <div class="empty-state">Loading tournaments...</div>
+        `;
+
+        try {
+            await Promise.all([
+                loadTournaments(),
+                loadJoinedTournaments(),
+                loadCardSettings(),
+                loadBanners()
+            ]);
+
             renderTournaments();
-        })
-        .catch(error => {
-            console.error(
-                "Firebase joining load error:",
-                error
-            );
-        });
+            renderBanners();
 
+        } catch (error) {
+            console.error("Homepage loading error:", error);
+
+            tournamentList.innerHTML = `
+                <div class="empty-state">
+                    Could not load tournaments.
+                    <br>${escapeHTML(error.message)}
+                </div>
+            `;
+        }
+    }
+
+    initializeHome();
 }
