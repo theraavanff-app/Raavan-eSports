@@ -21,6 +21,7 @@ import {
 const joinedTournaments = new Set();
 
 let tournaments = [];
+
 let cardSettings = {
     prizePool: true,
     perKillReward: true,
@@ -31,6 +32,7 @@ let cardSettings = {
 };
 
 let banners = [];
+let bannerTimer = null;
 
 
 // HTML SAFETY
@@ -45,7 +47,7 @@ function escapeHTML(value) {
 }
 
 
-// LOAD TOURNAMENTS FROM FIRESTORE
+// LOAD TOURNAMENTS
 async function loadTournaments() {
     const snapshot = await getDocs(
         collection(db, "tournaments")
@@ -82,7 +84,7 @@ async function loadJoinedTournaments() {
 }
 
 
-// LOAD HOME CARD SETTINGS
+// LOAD CARD SETTINGS
 async function loadCardSettings() {
     const snapshot = await getDoc(
         doc(db, "appSettings", "cardFields")
@@ -97,13 +99,18 @@ async function loadCardSettings() {
 }
 
 
-// LOAD BANNERS FROM FIRESTORE
+// LOAD BANNERS
 async function loadBanners() {
     const snapshot = await getDocs(
         collection(db, "banners")
     );
 
-    banners = snapshot.docs.map(item => item.data());
+    banners = snapshot.docs
+        .map(item => item.data())
+        .filter(item =>
+            typeof item.imageUrl === "string" &&
+            /^https?:\/\//i.test(item.imageUrl)
+        );
 }
 
 
@@ -171,58 +178,85 @@ export function initHomepage() {
     homePage.appendChild(profilePage);
 
 
-    // BANNER SLIDER
+    // =================================
+    // DYNAMIC BANNER SLIDER
+    // =================================
+
     function renderBanners() {
 
         const bannerContainer =
-            document.querySelector(
-                "#bannerSlider, .banner-slider, .banner-container, .home-banner"
-            );
+            document.getElementById("bannerSlider");
 
         if (!bannerContainer) {
-            console.warn(
-                "Banner container not found in home.html."
-            );
+            console.warn("Banner slider not found.");
             return;
         }
 
+        if (bannerTimer) {
+            clearInterval(bannerTimer);
+            bannerTimer = null;
+        }
+
+        // NO ADMIN BANNERS - SHOW DEFAULT HERO
         if (!banners.length) {
-            bannerContainer.innerHTML = "";
+
+            bannerContainer.style.backgroundImage = "";
+            bannerContainer.style.backgroundSize = "";
+            bannerContainer.style.backgroundPosition = "";
+
+            bannerContainer.innerHTML = `
+                <div class="hero-tag">WELCOME TO THE BATTLE</div>
+                <h2>PLAY SMART.<br>WIN BIG.</h2>
+                <p>Your tournament journey starts here.</p>
+                <div class="hero-decoration">R</div>
+            `;
+
             return;
         }
 
+        let currentIndex = 0;
+
+        // KEEP ORIGINAL HERO TEXT
         bannerContainer.innerHTML = `
-            <div class="raavan-banner-slider">
-                ${banners.map((banner, index) => `
-                    <img
-                        class="raavan-banner ${index === 0 ? "active" : ""}"
-                        src="${escapeHTML(banner.imageUrl)}"
-                        alt="Raavan eSports banner"
-                        loading="${index === 0 ? "eager" : "lazy"}"
-                    >
-                `).join("")}
-            </div>
+            <div class="hero-tag">WELCOME TO THE BATTLE</div>
+            <h2>PLAY SMART.<br>WIN BIG.</h2>
+            <p>Your tournament journey starts here.</p>
+            <div class="hero-decoration">R</div>
         `;
 
-        const images = bannerContainer.querySelectorAll(
-            ".raavan-banner"
-        );
+        function showBanner(index) {
 
-        if (images.length > 1) {
-            let current = 0;
+            const imageUrl = banners[index].imageUrl;
 
-            setInterval(() => {
-                images[current].classList.remove("active");
+            bannerContainer.style.backgroundImage =
+                `linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,0,0,.25)), url("${imageUrl}")`;
 
-                current = (current + 1) % images.length;
+            bannerContainer.style.backgroundSize = "cover";
+            bannerContainer.style.backgroundPosition = "center";
+            bannerContainer.style.backgroundRepeat = "no-repeat";
+        }
 
-                images[current].classList.add("active");
-            }, 3500);
+        showBanner(currentIndex);
+
+        // CHANGE IMAGE EVERY 4 SECONDS
+        if (banners.length > 1) {
+
+            bannerTimer = setInterval(() => {
+
+                currentIndex =
+                    (currentIndex + 1) % banners.length;
+
+                showBanner(currentIndex);
+
+            }, 4000);
         }
     }
 
 
+    // =================================
     // RENDER TOURNAMENTS
+    // =================================
+
     function renderTournaments(category = "All") {
 
         const filtered = category === "All"
@@ -336,7 +370,10 @@ export function initHomepage() {
     }
 
 
+    // =================================
     // MY MATCHES
+    // =================================
+
     async function renderMyMatches() {
 
         const user = auth.currentUser;
@@ -359,6 +396,7 @@ export function initHomepage() {
         `;
 
         try {
+
             const q = query(
                 collection(db, "tournamentJoins"),
                 where("uid", "==", user.uid)
@@ -425,6 +463,7 @@ export function initHomepage() {
             `;
 
         } catch (error) {
+
             console.error("My Matches error:", error);
 
             matchesPage.innerHTML = `
@@ -437,7 +476,10 @@ export function initHomepage() {
     }
 
 
+    // =================================
     // PLAYER PROFILE
+    // =================================
+
     async function renderProfile() {
 
         const user = auth.currentUser;
@@ -454,6 +496,7 @@ export function initHomepage() {
         `;
 
         try {
+
             const profileSnap = await getDoc(
                 doc(db, "users", user.uid)
             );
@@ -516,6 +559,7 @@ export function initHomepage() {
             `;
 
         } catch (error) {
+
             console.error("Profile error:", error);
 
             profilePage.innerHTML = `
@@ -529,7 +573,10 @@ export function initHomepage() {
     }
 
 
+    // =================================
     // PAGE NAVIGATION
+    // =================================
+
     function showPage(page) {
 
         homeSections.forEach(section => {
@@ -561,7 +608,10 @@ export function initHomepage() {
     }
 
 
+    // =================================
     // TOURNAMENT DETAILS
+    // =================================
+
     function openDetails(id) {
 
         const item = tournaments.find(t =>
@@ -574,7 +624,9 @@ export function initHomepage() {
         }
 
         const joined = joinedTournaments.has(String(id));
-        const full = Number(item.players || 0) >= Number(item.capacity || 0);
+
+        const full =
+            Number(item.players || 0) >= Number(item.capacity || 0);
 
         modal.innerHTML = `
             <div class="details-box">
@@ -680,12 +732,14 @@ export function initHomepage() {
 
                 if (joinedTournaments.has(String(id)) || full) return;
 
-                const joinButton = document.getElementById("joinTournament");
+                const joinButton =
+                    document.getElementById("joinTournament");
 
                 joinButton.disabled = true;
                 joinButton.textContent = "JOINING...";
 
                 try {
+
                     const joinRef = doc(
                         db,
                         "tournamentJoins",
@@ -694,7 +748,8 @@ export function initHomepage() {
 
                     await runTransaction(db, async transaction => {
 
-                        const existingJoin = await transaction.get(joinRef);
+                        const existingJoin =
+                            await transaction.get(joinRef);
 
                         if (existingJoin.exists()) {
                             throw new Error(
@@ -717,6 +772,7 @@ export function initHomepage() {
                     joinedTournaments.add(String(id));
 
                     closeDetails();
+
                     renderTournaments(
                         document.querySelector(".category-btn.active")
                             ?.dataset.category || "All"
@@ -725,7 +781,9 @@ export function initHomepage() {
                     showJoinSuccess();
 
                 } catch (error) {
+
                     console.error("Joining error:", error);
+
                     alert(error.message || "Joining failed.");
 
                     joinButton.disabled = false;
@@ -755,6 +813,7 @@ export function initHomepage() {
         });
 
         button.classList.add("active");
+
         renderTournaments(button.dataset.category);
     });
 
@@ -763,14 +822,18 @@ export function initHomepage() {
     tournamentList.addEventListener("click", event => {
 
         const button = event.target.closest(".join-btn");
-        if (button) openDetails(button.dataset.id);
+
+        if (button) {
+            openDetails(button.dataset.id);
+        }
     });
 
 
     // MY MATCHES EVENTS
     matchesPage.addEventListener("click", event => {
 
-        const viewButton = event.target.closest(".my-match-view");
+        const viewButton =
+            event.target.closest(".my-match-view");
 
         if (viewButton) {
             openDetails(viewButton.dataset.id);
@@ -810,18 +873,27 @@ export function initHomepage() {
         event.preventDefault();
 
         const user = auth.currentUser;
-        const name = document.getElementById("newPlayerName").value.trim();
-        const message = document.getElementById("profileMessage");
+
+        const name =
+            document.getElementById("newPlayerName").value.trim();
+
+        const message =
+            document.getElementById("profileMessage");
 
         if (!user || !name) return;
 
-        const button = event.target.querySelector('button[type="submit"]');
+        const button =
+            event.target.querySelector('button[type="submit"]');
 
         button.disabled = true;
         button.textContent = "SAVING...";
 
         try {
-            await updateDoc(doc(db, "users", user.uid), { name });
+
+            await updateDoc(
+                doc(db, "users", user.uid),
+                { name }
+            );
 
             await updateProfile(user, {
                 displayName: name
@@ -830,7 +902,9 @@ export function initHomepage() {
             await renderProfile();
 
         } catch (error) {
+
             message.textContent = error.message;
+
             button.disabled = false;
             button.textContent = "SAVE PROFILE";
         }
@@ -855,6 +929,7 @@ export function initHomepage() {
     document.querySelectorAll(".nav-btn").forEach(button => {
 
         button.addEventListener("click", () => {
+
             const page = button.dataset.page;
 
             if (["home", "matches", "profile"].includes(page)) {
@@ -866,7 +941,10 @@ export function initHomepage() {
     });
 
 
+    // =================================
     // INITIAL FIREBASE LOAD
+    // =================================
+
     async function initializeHome() {
 
         tournamentList.innerHTML = `
@@ -874,6 +952,7 @@ export function initHomepage() {
         `;
 
         try {
+
             await Promise.all([
                 loadTournaments(),
                 loadJoinedTournaments(),
@@ -885,6 +964,7 @@ export function initHomepage() {
             renderBanners();
 
         } catch (error) {
+
             console.error("Homepage loading error:", error);
 
             tournamentList.innerHTML = `
