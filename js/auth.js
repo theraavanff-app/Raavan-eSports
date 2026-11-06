@@ -13,11 +13,14 @@ import {
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+const ADMIN_ID = "devloper gautam";
+const ADMIN_EMAIL = "the.raavanff@gmail.com";
+
 export function initAuthPage() {
 
+    // NORMAL LOGIN
     const loginForm = document.getElementById("loginForm");
 
-    // NORMAL LOGIN
     if (loginForm) {
 
         loginForm.addEventListener("submit", async (e) => {
@@ -34,8 +37,7 @@ export function initAuthPage() {
 
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-
-                window.location.href = "../pages/home.html";
+                window.location.href = "./home.html";
 
             } catch (error) {
                 errorBox.textContent = error.message;
@@ -102,7 +104,8 @@ export function initAuthPage() {
 
                 <input id="adminPassword"
                     type="password"
-                    placeholder="Admin Password"
+                    placeholder="Firebase Admin Password"
+                    autocomplete="current-password"
                     style="width:100%;box-sizing:border-box;padding:13px;margin:8px 0;background:#09090d;color:white;border:1px solid #333;border-radius:8px">
 
                 <p id="adminError" style="color:#ff5555;font-size:12px;text-align:center"></p>
@@ -129,22 +132,51 @@ export function initAuthPage() {
             popup.style.display = "none";
         });
 
-        document.getElementById("adminSubmit").addEventListener("click", () => {
+        document.getElementById("adminSubmit").addEventListener("click", async () => {
 
             const id = document.getElementById("adminID").value.trim();
             const password = document.getElementById("adminPassword").value;
             const error = document.getElementById("adminError");
+            const submitButton = document.getElementById("adminSubmit");
 
-            const ADMIN_ID = "devloper gautam";
-            const ADMIN_PASSWORD = "gautam@#";
+            error.textContent = "";
 
-            if (id === ADMIN_ID && password === ADMIN_PASSWORD) {
+            if (id !== ADMIN_ID) {
+                error.textContent = "Incorrect Admin ID!";
+                return;
+            }
 
-                window.location.href =
-                    "/Raavan-eSports/pages/admin.html";
+            if (!password) {
+                error.textContent = "Enter Firebase Admin Password!";
+                return;
+            }
 
-            } else {
-                error.textContent = "Incorrect Admin ID or Password!";
+            submitButton.disabled = true;
+            submitButton.textContent = "VERIFYING...";
+
+            try {
+                const result = await signInWithEmailAndPassword(
+                    auth,
+                    ADMIN_EMAIL,
+                    password
+                );
+
+                if (result.user.email !== ADMIN_EMAIL) {
+                    throw new Error("Admin account verification failed.");
+                }
+
+                window.location.href = "./admin.html";
+
+            } catch (error) {
+                console.error("Admin login error:", error);
+
+                error.textContent =
+                    error.code === "auth/invalid-credential"
+                    ? "Wrong Firebase Admin Password!"
+                    : error.message;
+
+                submitButton.disabled = false;
+                submitButton.textContent = "ENTER ADMIN PANEL";
             }
         });
     }
@@ -202,7 +234,7 @@ export function initAuthPage() {
                     createdAt: serverTimestamp()
                 });
 
-                window.location.href = "../pages/home.html";
+                window.location.href = "./home.html";
 
             } catch (error) {
                 console.error("Registration error:", error);
@@ -212,4 +244,4 @@ export function initAuthPage() {
             }
         });
     }
-}
+        }
