@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raavan eSports - Admin Panel</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-header">
+    <div>
+        <h2>RAAVAN <span>eSPORTS</span></h2>
+        <p>ADMIN CONTROL PANEL</p>
+    </div>
+    <button id="adminLogout">LOGOUT</button>
+</div>
+
+<main class="admin-container">
+
+    <section class="admin-welcome">
+        <h2>Welcome, Admin 👑</h2>
+        <p>Manage your tournaments, banners and home screen.</p>
+    </section>
+
+    <section class="admin-section">
+        <h3>🏆 Create Tournament</h3>
+
+        <form id="tournamentForm">
+            <input id="tName" placeholder="Tournament Name" required>
+
+            <select id="tCategory" required>
+                <option value="">Select Category</option>
+                <option>Solo</option>
+                <option>Duo</option>
+                <option>Squad</option>
+                <option>CS</option>
+                <option>BR</option>
+            </select>
+
+            <div class="admin-grid">
+                <input id="tPrize" placeholder="Prize Pool (coins)" type="number" min="0">
+                <input id="tPerKill" placeholder="Per Kill Reward (coins)" type="number" min="0">
+                <input id="tBooyah" placeholder="Booyah Prize (coins)" type="number" min="0">
+                <input id="tEntry" placeholder="Entry Fees (coins)" type="number" min="0">
+                <input id="tMap" placeholder="Map e.g. Bermuda" required>
+                <input id="tTime" placeholder="Match Time e.g. 6:00 PM" required>
+                <input id="tPlayers" placeholder="Current Players" type="number" min="0" value="0">
+                <input id="tCapacity" placeholder="Player Capacity" type="number" min="1" value="48" required>
+            </div>
+
+            <button class="primary-btn" type="submit" id="addTournamentBtn">
+                + ADD TOURNAMENT
+            </button>
+            <p id="tournamentMessage" class="admin-message"></p>
+        </form>
+    </section>
+
+    <section class="admin-section">
+        <h3>📋 Manage Tournaments</h3>
+        <div id="tournamentList">
+            <p class="muted">Loading tournaments...</p>
+        </div>
+    </section>
+
+    <section class="admin-section">
+        <h3>🎨 Home Card Display Settings</h3>
+        <p class="section-note">Choose which details appear on tournament cards.</p>
+
+        <div class="toggle-list">
+            <label>Prize Pool <input type="checkbox" data-field="prizePool" checked></label>
+            <label>Per Kill Reward <input type="checkbox" data-field="perKillReward" checked></label>
+            <label>Booyah Prize <input type="checkbox" data-field="booyahPrize" checked></label>
+            <label>Entry Fees <input type="checkbox" data-field="entryFees" checked></label>
+            <label>Map <input type="checkbox" data-field="map" checked></label>
+            <label>Players Count <input type="checkbox" data-field="playersCount" checked></label>
+        </div>
+
+        <button id="saveDisplaySettings" class="primary-btn">
+            SAVE DISPLAY SETTINGS
+        </button>
+        <p id="settingsMessage" class="admin-message"></p>
+    </section>
+
+    <section class="admin-section">
+        <h3>🖼️ Home Banner Management</h3>
+        <p class="section-note">Upload a banner image to show it on the home screen.</p>
+
+        <form id="bannerForm">
+            <input id="bannerImage" type="file" accept="image/*" required>
+            <button class="primary-btn" id="uploadBannerBtn" type="submit">
+                UPLOAD BANNER
+            </button>
+            <p id="bannerMessage" class="admin-message"></p>
+        </form>
+
+        <div id="bannerList">
+            <p class="muted">Loading banners...</p>
+        </div>
+    </section>
+
+</main>
+
+<script type="module" src="../js/admin.js"></script>
+</body>
+</html>
