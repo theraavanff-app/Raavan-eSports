@@ -4,28 +4,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Raavan eSports | Admin Panel</title>
+
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="../css/admin.css">
 </head>
+
 <body>
 
 <div class="admin-container">
 
+    <!-- ADMIN HEADER -->
     <header class="admin-header">
+
         <div>
             <h2>RAAVAN <span>ESPORTS</span></h2>
             <p>ADMIN CONTROL PANEL</p>
         </div>
+
         <button id="adminLogout">Logout</button>
+
     </header>
 
+
+    <!-- CREATE TOURNAMENT -->
     <section class="admin-section">
+
         <h3>➕ Create Tournament</h3>
 
         <form id="tournamentForm">
 
-            <input id="tName" type="text" placeholder="Tournament Name" required>
+            <input
+                id="tName"
+                type="text"
+                placeholder="Tournament Name"
+                required
+            >
 
             <select id="tCategory" required>
                 <option value="">Select Category</option>
@@ -36,47 +51,185 @@
                 <option value="CS">CS</option>
             </select>
 
-            <input id="tPrize" type="text" placeholder="Prize Pool" required>
-            <input id="tPerKill" type="text" placeholder="Per Kill Reward">
-            <input id="tBooyah" type="text" placeholder="Booyah Prize">
-            <input id="tEntry" type="text" placeholder="Entry Fees">
+            <input
+                id="tPrize"
+                type="text"
+                placeholder="Prize Pool"
+                required
+            >
 
-            <input id="tMap" type="text" placeholder="Map Name">
-            <input id="tTime" type="text" placeholder="Match Time">
+            <input
+                id="tPerKill"
+                type="text"
+                placeholder="Per Kill Reward"
+            >
 
-            <input id="tPlayers" type="number" placeholder="Current Players" value="0" min="0">
-            <input id="tCapacity" type="number" placeholder="Maximum Players" required min="1">
+            <input
+                id="tBooyah"
+                type="text"
+                placeholder="Booyah Prize"
+            >
 
-            <button type="submit">CREATE TOURNAMENT</button>
+            <input
+                id="tEntry"
+                type="text"
+                placeholder="Entry Fees"
+            >
+
+            <input
+                id="tMap"
+                type="text"
+                placeholder="Map Name"
+            >
+
+            <input
+                id="tTime"
+                type="text"
+                placeholder="Match Time"
+            >
+
+            <input
+                id="tPlayers"
+                type="number"
+                placeholder="Current Players"
+                value="0"
+                min="0"
+            >
+
+            <input
+                id="tCapacity"
+                type="number"
+                placeholder="Maximum Players"
+                required
+                min="1"
+            >
+
+            <button type="submit">
+                CREATE TOURNAMENT
+            </button>
+
             <p id="tournamentMessage"></p>
+
         </form>
+
     </section>
 
+
+    <!-- MANAGE TOURNAMENTS -->
     <section class="admin-section">
+
         <h3>🏆 Manage Tournaments</h3>
-        <div id="tournamentList">Loading tournaments...</div>
+
+        <div id="tournamentList">
+            Loading tournaments...
+        </div>
+
     </section>
 
+
+    <!-- JOINED PLAYERS -->
+    <section
+        class="admin-section"
+        id="joinedPlayersSection"
+        hidden
+    >
+
+        <h3>👥 Joined Players</h3>
+
+        <h4 id="joinedTournamentTitle">
+            Tournament Players
+        </h4>
+
+        <p id="joinedPlayersCount">
+            Total Players: 0
+        </p>
+
+        <div id="joinedPlayersList">
+            Select a tournament to view players.
+        </div>
+
+    </section>
+
+
+    <!-- TOURNAMENT CARD SETTINGS -->
     <section class="admin-section">
+
         <h3>⚙️ Tournament Card Settings</h3>
 
         <form id="cardSettingsForm">
-            <label><input type="checkbox" name="prizePool" checked> Show Prize Pool</label>
-            <label><input type="checkbox" name="perKillReward" checked> Show Per Kill Reward</label>
-            <label><input type="checkbox" name="booyahPrize" checked> Show Booyah Prize</label>
-            <label><input type="checkbox" name="entryFees" checked> Show Entry Fees</label>
-            <label><input type="checkbox" name="map" checked> Show Map</label>
-            <label><input type="checkbox" name="playersCount" checked> Show Players Count</label>
 
-            <button type="submit">SAVE SETTINGS</button>
+            <label>
+                <input
+                    type="checkbox"
+                    name="prizePool"
+                    checked
+                >
+                Show Prize Pool
+            </label>
+
+            <label>
+                <input
+                    type="checkbox"
+                    name="perKillReward"
+                    checked
+                >
+                Show Per Kill Reward
+            </label>
+
+            <label>
+                <input
+                    type="checkbox"
+                    name="booyahPrize"
+                    checked
+                >
+                Show Booyah Prize
+            </label>
+
+            <label>
+                <input
+                    type="checkbox"
+                    name="entryFees"
+                    checked
+                >
+                Show Entry Fees
+            </label>
+
+            <label>
+                <input
+                    type="checkbox"
+                    name="map"
+                    checked
+                >
+                Show Map
+            </label>
+
+            <label>
+                <input
+                    type="checkbox"
+                    name="playersCount"
+                    checked
+                >
+                Show Players Count
+            </label>
+
+            <button type="submit">
+                SAVE SETTINGS
+            </button>
+
             <p id="settingsMessage"></p>
+
         </form>
+
     </section>
 
+
+    <!-- BANNER MANAGEMENT -->
     <section class="admin-section">
+
         <h3>🖼️ Homepage Banner Management</h3>
 
         <form id="bannerForm">
+
             <input
                 id="bannerUrl"
                 type="url"
@@ -84,15 +237,31 @@
                 required
             >
 
-            <button type="submit" id="addBannerBtn">ADD BANNER</button>
+            <button
+                type="submit"
+                id="addBannerBtn"
+            >
+                ADD BANNER
+            </button>
+
             <p id="bannerMessage"></p>
+
         </form>
 
-        <div id="bannerList">Loading banners...</div>
+        <div id="bannerList">
+            Loading banners...
+        </div>
+
     </section>
 
 </div>
 
-<script type="module" src="../js/admin.js"></script>
+
+<!-- ADMIN JAVASCRIPT -->
+<script
+    type="module"
+    src="../js/admin.js"
+></script>
+
 </body>
 </html>
