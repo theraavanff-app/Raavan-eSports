@@ -1,6 +1,5 @@
 
 import { auth, db } from "./firebase.js";
-import { renderWallet } from "./wallet.js";
 
 import {
     doc,
@@ -12,7 +11,6 @@ import {
     signOut,
     updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-
 
 // DEMO TOURNAMENTS
 const demoTournaments = [
@@ -87,7 +85,6 @@ export function initHomepage() {
 
     const homeSections = [...homePage.children];
 
-
     // TOURNAMENT DETAILS MODAL
     const modal = document.createElement("div");
 
@@ -111,7 +108,6 @@ export function initHomepage() {
     `;
 
     document.body.appendChild(successToast);
-
 
     function showJoinSuccess() {
 
@@ -141,14 +137,6 @@ export function initHomepage() {
     profilePage.className = "profile-page hidden";
 
     homePage.appendChild(profilePage);
-
-
-    // PLAYER WALLET PAGE
-    const walletPage = document.createElement("section");
-
-    walletPage.className = "hidden";
-
-    homePage.appendChild(walletPage);
 
 
     // ESCAPE USER DATA BEFORE HTML DISPLAY
@@ -191,7 +179,7 @@ export function initHomepage() {
                 <div class="tournament-top">
 
                     <span class="tournament-type">
-                        ${escapeHTML(item.category)} MATCH
+                        ${item.category} MATCH
                     </span>
 
                     <span class="match-status">
@@ -200,18 +188,18 @@ export function initHomepage() {
 
                 </div>
 
-                <h4>${escapeHTML(item.name)}</h4>
+                <h4>${item.name}</h4>
 
                 <div class="tournament-info">
 
                     <div class="info-box">
                         <small>MAP</small>
-                        <strong>${escapeHTML(item.map)}</strong>
+                        <strong>${item.map}</strong>
                     </div>
 
                     <div class="info-box">
                         <small>TIME</small>
-                        <strong>${escapeHTML(item.time)}</strong>
+                        <strong>${item.time}</strong>
                     </div>
 
                     <div class="info-box">
@@ -266,7 +254,7 @@ export function initHomepage() {
 
                             <div class="my-match-top">
 
-                                <span>${escapeHTML(item.category)} MATCH</span>
+                                <span>${item.category} MATCH</span>
 
                                 <span class="my-match-status">
                                     ● UPCOMING
@@ -274,18 +262,18 @@ export function initHomepage() {
 
                             </div>
 
-                            <h3>${escapeHTML(item.name)}</h3>
+                            <h3>${item.name}</h3>
 
                             <div class="my-match-info">
 
                                 <div>
                                     <small>MAP</small>
-                                    <strong>${escapeHTML(item.map)}</strong>
+                                    <strong>${item.map}</strong>
                                 </div>
 
                                 <div>
                                     <small>TIME</small>
-                                    <strong>${escapeHTML(item.time)}</strong>
+                                    <strong>${item.time}</strong>
                                 </div>
 
                                 <div>
@@ -479,11 +467,6 @@ export function initHomepage() {
             page !== "profile"
         );
 
-        walletPage.classList.toggle(
-            "hidden",
-            page !== "wallet"
-        );
-
         document.querySelectorAll(".nav-btn").forEach(button => {
 
             button.classList.toggle(
@@ -499,10 +482,6 @@ export function initHomepage() {
 
         if (page === "profile") {
             renderProfile();
-        }
-
-        if (page === "wallet") {
-            renderWallet(walletPage);
         }
     }
 
@@ -535,10 +514,10 @@ export function initHomepage() {
                 <div class="details-logo">R</div>
 
                 <span class="details-tag">
-                    ${escapeHTML(item.category)} MATCH
+                    ${item.category} MATCH
                 </span>
 
-                <h2>${escapeHTML(item.name)}</h2>
+                <h2>${item.name}</h2>
 
                 <p class="details-subtitle">
                     Your battle. Your glory.
@@ -548,17 +527,17 @@ export function initHomepage() {
 
                     <div class="details-item">
                         <small>GAME MODE</small>
-                        <strong>${escapeHTML(item.category)}</strong>
+                        <strong>${item.category}</strong>
                     </div>
 
                     <div class="details-item">
                         <small>MAP</small>
-                        <strong>${escapeHTML(item.map)}</strong>
+                        <strong>${item.map}</strong>
                     </div>
 
                     <div class="details-item">
                         <small>MATCH TIME</small>
-                        <strong>${escapeHTML(item.time)}</strong>
+                        <strong>${item.time}</strong>
                     </div>
 
                     <div class="details-item">
@@ -573,7 +552,7 @@ export function initHomepage() {
 
                     <div class="details-item">
                         <small>REWARD TYPE</small>
-                        <strong>${escapeHTML(item.prize)}</strong>
+                        <strong>${item.prize}</strong>
                     </div>
 
                 </div>
@@ -833,7 +812,9 @@ export function initHomepage() {
     // WALLET BUTTON
     document.getElementById("walletBtn")?.addEventListener("click", () => {
 
-        showPage("wallet");
+        alert(
+            "Demo Points Wallet will be added in the next update."
+        );
 
     });
 
@@ -856,11 +837,14 @@ export function initHomepage() {
             if (
                 page === "home" ||
                 page === "matches" ||
-                page === "profile" ||
-                page === "wallet"
+                page === "profile"
             ) {
 
                 showPage(page);
+
+            } else {
+
+                alert("This page is coming soon.");
 
             }
 
