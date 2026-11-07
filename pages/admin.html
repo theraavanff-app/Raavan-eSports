@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#09090d">
     <title>Raavan eSports | Admin Panel</title>
     <link rel="stylesheet" href="../css/main.css">
     <link rel="stylesheet" href="../css/admin.css">
@@ -13,139 +14,251 @@
 <div class="admin-container">
 
     <header class="admin-header">
-        <div>
-            <h2>RAAVAN <span>ESPORTS</span></h2>
-            <p>ADMIN CONTROL PANEL</p>
+        <div class="admin-brand">
+            <div class="admin-logo">R</div>
+            <div>
+                <h2>RAAVAN <span>ESPORTS</span></h2>
+                <p>ADMIN CONTROL PANEL</p>
+            </div>
         </div>
-        <button id="adminLogout">Logout</button>
+        <button id="adminLogout" type="button">
+            <span>↗</span> Logout
+        </button>
     </header>
 
-    <!-- CREATE TOURNAMENT -->
-    <section class="admin-section">
-        <h3>➕ Create Tournament</h3>
-        <form id="tournamentForm">
-            <input id="tName" type="text" placeholder="Tournament Name" required>
-            <select id="tCategory" required>
-                <option value="">Select Category</option>
-                <option value="Solo">Solo</option>
-                <option value="Duo">Duo</option>
-                <option value="Squad">Squad</option>
-                <option value="BR">BR</option>
-                <option value="CS">CS</option>
-            </select>
-            <input id="tPrize" type="text" placeholder="Prize Pool" required>
-            <input id="tPerKill" type="text" placeholder="Per Kill Reward">
-            <input id="tBooyah" type="text" placeholder="Booyah Prize">
-            <input id="tEntry" type="text" placeholder="Entry Fees">
-            <input id="tMap" type="text" placeholder="Map Name">
-            <input id="tTime" type="text" placeholder="Match Time">
-            <input id="tPlayers" type="number" placeholder="Current Players" value="0" min="0">
-            <input id="tCapacity" type="number" placeholder="Maximum Players" required min="1">
-            <button type="submit">CREATE TOURNAMENT</button>
-            <p id="tournamentMessage"></p>
-        </form>
-    </section>
+    <main>
+        <section class="admin-welcome">
+            <div class="welcome-content">
+                <span class="welcome-tag">⚡ COMMAND CENTER</span>
+                <h1>Welcome, <span>Admin</span></h1>
+                <p>Manage your tournaments, players and virtual wallet from one place.</p>
+            </div>
+            <div class="welcome-emblem">R</div>
+        </section>
 
-    <!-- MANAGE TOURNAMENTS -->
-    <section class="admin-section">
-        <h3>🏆 Manage Tournaments</h3>
-        <div id="tournamentList">Loading tournaments...</div>
-    </section>
+        <nav class="admin-shortcuts" aria-label="Admin sections">
+            <a href="#createTournament">＋ Create</a>
+            <a href="#manageTournaments">🏆 Tournaments</a>
+            <a href="#walletManagement">🪙 Wallet</a>
+            <a href="#bannerManagement">🖼️ Banners</a>
+        </nav>
 
-    <!-- JOINED PLAYERS -->
-    <section class="admin-section" id="joinedPlayersSection" hidden>
-        <h3>👥 Joined Players</h3>
-        <h4 id="joinedTournamentTitle">Tournament Players</h4>
-        <p id="joinedPlayersCount">Total Players: 0</p>
-        <div id="joinedPlayersList">Select a tournament to view players.</div>
-    </section>
+        <!-- CREATE TOURNAMENT -->
+        <section class="admin-section" id="createTournament">
+            <div class="section-heading">
+                <div class="section-icon">＋</div>
+                <div>
+                    <h3>Create Tournament</h3>
+                    <p>Add a new battle to your platform</p>
+                </div>
+            </div>
 
-    <!-- WALLET MANAGEMENT -->
-    <section class="admin-section wallet-admin-section">
-        <h3>🪙 Virtual Wallet Management</h3>
-        <p class="wallet-admin-note">
-            Manage virtual coins only. No real-money deposits or withdrawals.
-        </p>
+            <form id="tournamentForm">
+                <div class="admin-form-grid">
+                    <div class="form-field full-field">
+                        <label for="tName">Tournament Name</label>
+                        <input id="tName" type="text" placeholder="Enter tournament name" required>
+                    </div>
 
-        <div class="wallet-admin-card">
-            <h4>🎁 Give Admin Bonus</h4>
+                    <div class="form-field">
+                        <label for="tCategory">Category</label>
+                        <select id="tCategory" required>
+                            <option value="">Select Category</option>
+                            <option value="Solo">Solo</option>
+                            <option value="Duo">Duo</option>
+                            <option value="Squad">Squad</option>
+                            <option value="BR">BR</option>
+                            <option value="CS">CS</option>
+                        </select>
+                    </div>
 
-            <form id="bonusForm">
-                <input
-                    id="bonusUid"
-                    type="text"
-                    placeholder="Player Firebase UID"
-                    required
-                >
+                    <div class="form-field">
+                        <label for="tMap">Map Name</label>
+                        <input id="tMap" type="text" placeholder="e.g. Bermuda">
+                    </div>
 
-                <input
-                    id="bonusAmount"
-                    type="number"
-                    placeholder="Bonus Coins"
-                    min="1"
-                    max="100000"
-                    required
-                >
+                    <div class="form-field">
+                        <label for="tPrize">Prize Pool</label>
+                        <input id="tPrize" type="text" placeholder="e.g. 1000" required>
+                    </div>
 
-                <input
-                    id="bonusNote"
-                    type="text"
-                    placeholder="Bonus reason (optional)"
-                    maxlength="100"
-                >
+                    <div class="form-field">
+                        <label for="tPerKill">Per Kill Reward</label>
+                        <input id="tPerKill" type="text" placeholder="e.g. 10">
+                    </div>
 
-                <button type="submit">ADD BONUS COINS</button>
-                <p id="bonusMessage"></p>
+                    <div class="form-field">
+                        <label for="tBooyah">Booyah Prize</label>
+                        <input id="tBooyah" type="text" placeholder="e.g. 200">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="tEntry">Entry Fees</label>
+                        <input id="tEntry" type="text" placeholder="e.g. 20">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="tTime">Match Time</label>
+                        <input id="tTime" type="text" placeholder="e.g. 8:00 PM">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="tPlayers">Current Players</label>
+                        <input id="tPlayers" type="number" placeholder="0" value="0" min="0">
+                    </div>
+
+                    <div class="form-field">
+                        <label for="tCapacity">Maximum Players</label>
+                        <input id="tCapacity" type="number" placeholder="e.g. 48" required min="1">
+                    </div>
+                </div>
+
+                <button class="primary-btn" type="submit">CREATE TOURNAMENT <span>→</span></button>
+                <p id="tournamentMessage" class="admin-message"></p>
             </form>
-        </div>
+        </section>
 
-        <div class="wallet-admin-card">
-            <div class="wallet-admin-heading">
-                <h4>📥 Coin Requests</h4>
-                <button type="button" id="refreshRequests">REFRESH</button>
+        <!-- MANAGE TOURNAMENTS -->
+        <section class="admin-section" id="manageTournaments">
+            <div class="section-heading">
+                <div class="section-icon">🏆</div>
+                <div>
+                    <h3>Manage Tournaments</h3>
+                    <p>View and control your active tournaments</p>
+                </div>
+            </div>
+            <div id="tournamentList">Loading tournaments...</div>
+        </section>
+
+        <!-- JOINED PLAYERS -->
+        <section class="admin-section" id="joinedPlayersSection" hidden>
+            <div class="section-heading">
+                <div class="section-icon">👥</div>
+                <div>
+                    <h3>Joined Players</h3>
+                    <p>Players registered in this tournament</p>
+                </div>
+            </div>
+            <h4 id="joinedTournamentTitle">Tournament Players</h4>
+            <p id="joinedPlayersCount">Total Players: 0</p>
+            <div id="joinedPlayersList">Select a tournament to view players.</div>
+        </section>
+
+        <!-- WALLET MANAGEMENT -->
+        <section class="admin-section wallet-admin-section" id="walletManagement">
+            <div class="section-heading">
+                <div class="section-icon">🪙</div>
+                <div>
+                    <h3>Virtual Wallet</h3>
+                    <p>Manage player coins and requests</p>
+                </div>
             </div>
 
-            <div id="coinRequestsList">
-                Loading requests...
+            <p class="wallet-admin-note">
+                Virtual coins only. No real-money deposits or withdrawals.
+            </p>
+
+            <div class="wallet-admin-card">
+                <div class="subsection-heading">
+                    <span>🎁</span>
+                    <div>
+                        <h4>Give Admin Bonus</h4>
+                        <p>Credit virtual coins to a player</p>
+                    </div>
+                </div>
+
+                <form id="bonusForm">
+                    <label for="bonusUid">Player Firebase UID</label>
+                    <input id="bonusUid" type="text" placeholder="Enter player UID" required>
+
+                    <label for="bonusAmount">Bonus Coins</label>
+                    <input id="bonusAmount" type="number" placeholder="Enter coin amount" min="1" max="100000" required>
+
+                    <label for="bonusNote">Bonus Reason <span>(Optional)</span></label>
+                    <input id="bonusNote" type="text" placeholder="e.g. Tournament reward" maxlength="100">
+
+                    <button class="primary-btn" type="submit">ADD BONUS COINS <span>→</span></button>
+                    <p id="bonusMessage" class="admin-message"></p>
+                </form>
             </div>
-        </div>
 
-        <div class="wallet-admin-card">
-            <h4>📜 Recent Wallet Transactions</h4>
-            <div id="adminWalletHistory">
-                Loading history...
+            <div class="wallet-admin-card">
+                <div class="wallet-admin-heading">
+                    <div class="subsection-heading">
+                        <span>📥</span>
+                        <div>
+                            <h4>Coin Requests</h4>
+                            <p>Review pending player requests</p>
+                        </div>
+                    </div>
+                    <button type="button" id="refreshRequests">↻ Refresh</button>
+                </div>
+
+                <div id="coinRequestsList">Loading requests...</div>
             </div>
-        </div>
-    </section>
 
-    <!-- CARD SETTINGS -->
-    <section class="admin-section">
-        <h3>⚙️ Tournament Card Settings</h3>
+            <div class="wallet-admin-card">
+                <div class="subsection-heading">
+                    <span>📜</span>
+                    <div>
+                        <h4>Recent Transactions</h4>
+                        <p>Latest virtual coin activity</p>
+                    </div>
+                </div>
+                <div id="adminWalletHistory">Loading history...</div>
+            </div>
+        </section>
 
-        <form id="cardSettingsForm">
-            <label><input type="checkbox" name="prizePool" checked> Show Prize Pool</label>
-            <label><input type="checkbox" name="perKillReward" checked> Show Per Kill Reward</label>
-            <label><input type="checkbox" name="booyahPrize" checked> Show Booyah Prize</label>
-            <label><input type="checkbox" name="entryFees" checked> Show Entry Fees</label>
-            <label><input type="checkbox" name="map" checked> Show Map</label>
-            <label><input type="checkbox" name="playersCount" checked> Show Players Count</label>
-            <button type="submit">SAVE SETTINGS</button>
-            <p id="settingsMessage"></p>
-        </form>
-    </section>
+        <!-- CARD SETTINGS -->
+        <section class="admin-section" id="cardSettings">
+            <div class="section-heading">
+                <div class="section-icon">⚙️</div>
+                <div>
+                    <h3>Tournament Card Settings</h3>
+                    <p>Choose what players can see on cards</p>
+                </div>
+            </div>
 
-    <!-- BANNER MANAGEMENT -->
-    <section class="admin-section">
-        <h3>🖼️ Homepage Banner Management</h3>
+            <form id="cardSettingsForm">
+                <div class="toggle-list">
+                    <label><span>Prize Pool</span><input type="checkbox" name="prizePool" checked></label>
+                    <label><span>Per Kill Reward</span><input type="checkbox" name="perKillReward" checked></label>
+                    <label><span>Booyah Prize</span><input type="checkbox" name="booyahPrize" checked></label>
+                    <label><span>Entry Fees</span><input type="checkbox" name="entryFees" checked></label>
+                    <label><span>Map</span><input type="checkbox" name="map" checked></label>
+                    <label><span>Players Count</span><input type="checkbox" name="playersCount" checked></label>
+                </div>
 
-        <form id="bannerForm">
-            <input id="bannerUrl" type="url" placeholder="Paste direct image URL here" required>
-            <button type="submit" id="addBannerBtn">ADD BANNER</button>
-            <p id="bannerMessage"></p>
-        </form>
+                <button class="primary-btn" type="submit">SAVE SETTINGS <span>→</span></button>
+                <p id="settingsMessage" class="admin-message"></p>
+            </form>
+        </section>
 
-        <div id="bannerList">Loading banners...</div>
-    </section>
+        <!-- BANNER MANAGEMENT -->
+        <section class="admin-section" id="bannerManagement">
+            <div class="section-heading">
+                <div class="section-icon">🖼️</div>
+                <div>
+                    <h3>Homepage Banners</h3>
+                    <p>Manage images shown on the homepage</p>
+                </div>
+            </div>
+
+            <form id="bannerForm">
+                <label for="bannerUrl">Direct Image URL</label>
+                <input id="bannerUrl" type="url" placeholder="Paste direct image URL here" required>
+                <button class="primary-btn" type="submit" id="addBannerBtn">ADD BANNER <span>→</span></button>
+                <p id="bannerMessage" class="admin-message"></p>
+            </form>
+
+            <div id="bannerList">Loading banners...</div>
+        </section>
+    </main>
+
+    <footer class="admin-footer">
+        <div class="footer-brand">RAAVAN <span>ESPORTS</span></div>
+        <p>ADMIN CONTROL PANEL · PLAY SMART. WIN BIG.</p>
+    </footer>
 
 </div>
 
