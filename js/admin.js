@@ -911,7 +911,7 @@ coinRequestsList.addEventListener("click", async e => {
                 transaction.update(requestRef, {
                     status: "rejected",
                     processedAt: serverTimestamp(),
-                    processedBy: auth.currentUser.email
+                    processedBy: auth.currentUser.uid
                 });
 
                 transaction.update(claimRef, {
@@ -972,7 +972,7 @@ coinRequestsList.addEventListener("click", async e => {
             transaction.update(requestRef, {
                 status: "approved",
                 processedAt: serverTimestamp(),
-                processedBy: auth.currentUser.email
+                processedBy: auth.currentUser.uid
             });
 
             // UPDATE UTR CLAIM
