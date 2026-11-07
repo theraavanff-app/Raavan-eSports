@@ -1,4 +1,3 @@
-
 import { auth, db } from "./firebase.js";
 
 import {
@@ -6,20 +5,29 @@ import {
     getDoc,
     setDoc,
     updateDoc,
-    addDoc,
     collection,
     getDocs,
     query,
     where,
     runTransaction,
     serverTimestamp,
-    onSnapshot
+    onSnapshot,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 import {
     signOut,
     updateProfile
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+// =====================================
+// CONFIGURATION
+// =====================================
+
+const UPI_ID = "gautam.raj-sahu@pthdfc";
+const PAYEE_NAME = "Gautam Sahu";
+
+const COIN_PACKAGES = [10, 20, 50, 100, 200, 500];
 
 const joinedTournaments = new Set();
 
@@ -38,21 +46,15 @@ let banners = [];
 let bannerTimer = null;
 let unsubscribeTournaments = null;
 
-// WALLET STATE
 let walletBalance = 0;
 let walletRequests = [];
 let walletTransactions = [];
 
 let walletListenersStarted = false;
 
-let unsubscribeWallet = null;
-let unsubscribeRequests = null;
-let unsubscribeHistory = null;
-
-
-// =================================
-// HTML SAFETY
-// =================================
+// =====================================
+// HELPERS
+// =====================================
 
 function escapeHTML(value) {
     return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -64,26 +66,32 @@ function escapeHTML(value) {
     })[char]);
 }
 
+function formatWalletDate(timestamp) {
+    if (!timestamp || !timestamp.toDate) {
+        return "Just now";
+    }
 
-// =================================
-// TOURNAMENT STATUS
-// =================================
+    return timestamp.toDate().toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
 
 function getTournamentStatus(item) {
     const players = Number(item.players || 0);
     const capacity = Number(item.capacity || 0);
 
-    if (capacity > 0 && players >= capacity) {
-        return "full";
-    }
-
-    return "available";
+    return capacity > 0 && players >= capacity
+        ? "full"
+        : "available";
 }
 
-
-// =================================
-// LOAD TOURNAMENTS
-// =================================
+// =====================================
+// LOAD DATA
+// =====================================
 
 async function loadTournaments() {
     const snapshot = await getDocs(
@@ -98,10 +106,51 @@ async function loadTournaments() {
         .filter(item => item.isActive !== false);
 }
 
+async function loadJoinedTournaments() {
+    joinedTournaments.clear();
 
-// =================================
-// REAL-TIME TOURNAMENT UPDATES
-// =================================
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const snapshot = await getDocs(
+        query(
+            collection(db, "tournamentJoins"),
+            where("uid", "==", user.uid)
+        )
+    );
+
+    snapshot.forEach(item => {
+        joinedTournaments.add(
+            String(item.data().tournamentId)
+        );
+    });
+}
+
+async function loadCardSettings() {
+    const snapshot = await getDoc(
+        doc(db, "appSettings", "cardFields")
+    );
+
+    if (snapshot.exists()) {
+        cardSettings = {
+            ...cardSettings,
+            ...snapshot.data()
+        };
+    }
+}
+
+async function loadBanners() {
+    const snapshot = await getDocs(
+        collection(db, "banners")
+    );
+
+    banners = snapshot.docs
+        .map(item => item.data())
+        .filter(item =>
+            typeof item.imageUrl === "string" &&
+            /^https?:\/\//i.test(item.imageUrl)
+        );
+}
 
 function listenToTournaments(renderTournaments) {
     if (unsubscribeTournaments) {
@@ -118,83 +167,21 @@ function listenToTournaments(renderTournaments) {
                 }))
                 .filter(item => item.isActive !== false);
 
-            const activeCategory =
+            const category =
                 document.querySelector(".category-btn.active")
                     ?.dataset.category || "All";
 
-            renderTournaments(activeCategory);
+            renderTournaments(category);
         },
         error => {
-            console.error("Tournament listener error:", error);
+            console.error("Tournament listener:", error);
         }
     );
 }
 
-
-// =================================
-// LOAD JOINED TOURNAMENTS
-// =================================
-
-async function loadJoinedTournaments() {
-    joinedTournaments.clear();
-
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const q = query(
-        collection(db, "tournamentJoins"),
-        where("uid", "==", user.uid)
-    );
-
-    const snapshot = await getDocs(q);
-
-    snapshot.forEach(item => {
-        joinedTournaments.add(
-            String(item.data().tournamentId)
-        );
-    });
-}
-
-
-// =================================
-// LOAD CARD SETTINGS
-// =================================
-
-async function loadCardSettings() {
-    const snapshot = await getDoc(
-        doc(db, "appSettings", "cardFields")
-    );
-
-    if (snapshot.exists()) {
-        cardSettings = {
-            ...cardSettings,
-            ...snapshot.data()
-        };
-    }
-}
-
-
-// =================================
-// LOAD BANNERS
-// =================================
-
-async function loadBanners() {
-    const snapshot = await getDocs(
-        collection(db, "banners")
-    );
-
-    banners = snapshot.docs
-        .map(item => item.data())
-        .filter(item =>
-            typeof item.imageUrl === "string" &&
-            /^https?:\/\//i.test(item.imageUrl)
-        );
-}
-
-
-// =================================
+// =====================================
 // MAIN HOMEPAGE
-// =================================
+// =====================================
 
 export function initHomepage() {
     const tournamentList =
@@ -213,7 +200,6 @@ export function initHomepage() {
 
     const homeSections = [...homePage.children];
 
-
     // =================================
     // TOURNAMENT MODAL
     // =================================
@@ -221,9 +207,7 @@ export function initHomepage() {
     const modal = document.createElement("div");
     modal.id = "tournamentModal";
     modal.className = "tournament-modal hidden";
-
     document.body.appendChild(modal);
-
 
     // =================================
     // SUCCESS TOAST
@@ -243,12 +227,9 @@ export function initHomepage() {
 
     document.body.appendChild(successToast);
 
-
     function showJoinSuccess() {
         successToast.classList.remove("show");
-
         void successToast.offsetWidth;
-
         successToast.classList.add("show");
 
         setTimeout(() => {
@@ -256,95 +237,70 @@ export function initHomepage() {
         }, 2600);
     }
 
-
     // =================================
-    // MY MATCHES PAGE
+    // DYNAMIC PAGES
     // =================================
 
     const matchesPage = document.createElement("section");
-
     matchesPage.className = "matches-page hidden";
-
     homePage.appendChild(matchesPage);
 
-
-    // =================================
-    // PROFILE PAGE
-    // =================================
-
     const profilePage = document.createElement("section");
-
     profilePage.className = "profile-page hidden";
-
     homePage.appendChild(profilePage);
 
-
-    // =================================
-    // WALLET PAGE
-    // =================================
-
     const walletPage = document.createElement("section");
-
     walletPage.className = "wallet-page hidden";
-
     homePage.appendChild(walletPage);
 
-
     // =================================
-    // DYNAMIC BANNER SLIDER
+    // BANNERS
     // =================================
 
     function renderBanners() {
-        const bannerContainer =
+        const container =
             document.getElementById("bannerSlider") ||
             document.querySelector(".hero-banner");
 
-        if (!bannerContainer) return;
+        if (!container) return;
 
         if (bannerTimer) {
             clearInterval(bannerTimer);
             bannerTimer = null;
         }
 
-        const heroContent = `
+        container.innerHTML = `
             <div class="hero-tag">WELCOME TO THE BATTLE</div>
             <h2>PLAY SMART.<br>WIN BIG.</h2>
             <p>Your tournament journey starts here.</p>
             <div class="hero-decoration">R</div>
         `;
 
-        bannerContainer.innerHTML = heroContent;
-
         if (!banners.length) {
-            bannerContainer.style.backgroundImage = "";
+            container.style.backgroundImage = "";
             return;
         }
 
-        let currentIndex = 0;
+        let index = 0;
 
-        function showBanner(index) {
-            const imageUrl = banners[index].imageUrl;
+        function showBanner() {
+            container.style.backgroundImage =
+                `linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,0,0,.25)), url("${banners[index].imageUrl}")`;
 
-            bannerContainer.style.backgroundImage =
-                `linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,0,0,.25)), url("${imageUrl}")`;
-
-            bannerContainer.style.backgroundSize = "cover";
-            bannerContainer.style.backgroundPosition = "center";
-            bannerContainer.style.backgroundRepeat = "no-repeat";
+            container.style.backgroundSize = "cover";
+            container.style.backgroundPosition = "center";
+            container.style.backgroundRepeat = "no-repeat";
         }
 
-        showBanner(currentIndex);
+        showBanner();
 
         if (banners.length > 1) {
             bannerTimer = setInterval(() => {
-                currentIndex =
-                    (currentIndex + 1) % banners.length;
-
-                showBanner(currentIndex);
+                index = (index + 1) % banners.length;
+                showBanner();
             }, 4000);
         }
     }
-
 
     // =================================
     // TOURNAMENT CARDS
@@ -370,14 +326,10 @@ export function initHomepage() {
             const players = Number(item.players || 0);
             const capacity = Number(item.capacity || 0);
 
-            const status = getTournamentStatus(item);
-            const full = status === "full";
+            const full = getTournamentStatus(item) === "full";
+            const joined = joinedTournaments.has(String(item.id));
 
-            const joined =
-                joinedTournaments.has(String(item.id));
-
-            const remainingSlots =
-                Math.max(0, capacity - players);
+            const remaining = Math.max(0, capacity - players);
 
             const info = [];
 
@@ -385,8 +337,7 @@ export function initHomepage() {
                 info.push(`
                     <div class="info-box">
                         <small>PRIZE POOL</small>
-                        <strong>
-                            ${escapeHTML(item.prizePool ?? 0)}
+                        <strong>${escapeHTML(item.prizePool ?? 0)}
                             <small class="coin-unit">COINS</small>
                         </strong>
                     </div>
@@ -397,8 +348,7 @@ export function initHomepage() {
                 info.push(`
                     <div class="info-box">
                         <small>PER KILL</small>
-                        <strong>
-                            ${escapeHTML(item.perKillReward ?? 0)}
+                        <strong>${escapeHTML(item.perKillReward ?? 0)}
                             <small class="coin-unit">COINS</small>
                         </strong>
                     </div>
@@ -409,8 +359,7 @@ export function initHomepage() {
                 info.push(`
                     <div class="info-box">
                         <small>ENTRY FEES</small>
-                        <strong>
-                            ${escapeHTML(item.entryFees ?? 0)}
+                        <strong>${escapeHTML(item.entryFees ?? 0)}
                             <small class="coin-unit">COINS</small>
                         </strong>
                     </div>
@@ -433,21 +382,14 @@ export function initHomepage() {
 
             return `
                 <article class="tournament-card">
-
                     <div class="tournament-top">
                         <span class="tournament-type">
                             ${escapeHTML(item.category || "MATCH")} MATCH
                         </span>
 
-                        ${full ? `
-                            <span class="match-status full-status">
-                                ● FULL
-                            </span>
-                        ` : `
-                            <span class="match-status">
-                                ● UPCOMING
-                            </span>
-                        `}
+                        <span class="match-status ${full ? "full-status" : ""}">
+                            ● ${full ? "FULL" : "UPCOMING"}
+                        </span>
                     </div>
 
                     <h4>${escapeHTML(item.name || "Tournament")}</h4>
@@ -456,21 +398,14 @@ export function initHomepage() {
                         ${info.join("")}
                     </div>
 
-                    ${lowerInfo.length ? `
-                        <div class="tournament-lower-info">
-                            ${lowerInfo.join("")}
-                        </div>
-                    ` : ""}
+                    <div class="tournament-lower-info">
+                        ${lowerInfo.join("")}
+                    </div>
 
                     <div class="card-slot-section">
                         <div class="card-slot-label">
-                            <span>
-                                ${full ? "Tournament Full" : "Available Slots"}
-                            </span>
-
-                            <strong>
-                                ${full ? "FULL" : remainingSlots}
-                            </strong>
+                            <span>${full ? "Tournament Full" : "Available Slots"}</span>
+                            <strong>${full ? "FULL" : remaining}</strong>
                         </div>
                     </div>
 
@@ -483,16 +418,13 @@ export function initHomepage() {
                                 ? "VIEW TOURNAMENT"
                                 : full
                                     ? "TOURNAMENT FULL"
-                                    : "VIEW & JOIN"
-                            }
+                                    : "VIEW & JOIN"}
                         </button>
                     </div>
-
                 </article>
             `;
         }).join("");
     }
-
 
     // =================================
     // MY MATCHES
@@ -519,19 +451,19 @@ export function initHomepage() {
         `;
 
         try {
-            const q = query(
-                collection(db, "tournamentJoins"),
-                where("uid", "==", user.uid)
+            const snapshot = await getDocs(
+                query(
+                    collection(db, "tournamentJoins"),
+                    where("uid", "==", user.uid)
+                )
             );
-
-            const snapshot = await getDocs(q);
 
             const allMatches = snapshot.docs.map(item => ({
                 ...item.data(),
                 joinId: item.id
             }));
 
-            const checkedMatches = await Promise.all(
+            const checked = await Promise.all(
                 allMatches.map(async item => {
                     const tournamentSnap = await getDoc(
                         doc(db, "tournaments", String(item.tournamentId))
@@ -539,15 +471,15 @@ export function initHomepage() {
 
                     if (!tournamentSnap.exists()) return null;
 
-                    const tournament = tournamentSnap.data();
-
-                    if (tournament.isActive === false) return null;
+                    if (tournamentSnap.data().isActive === false) {
+                        return null;
+                    }
 
                     return item;
                 })
             );
 
-            const matches = checkedMatches.filter(Boolean);
+            const matches = checked.filter(Boolean);
 
             matchesPage.innerHTML = `
                 <div class="matches-heading">
@@ -560,12 +492,9 @@ export function initHomepage() {
                     <div class="my-match-list">
                         ${matches.map(item => `
                             <article class="my-match-card">
-
                                 <div class="my-match-top">
                                     <span>${escapeHTML(item.category)}</span>
-                                    <span class="my-match-status">
-                                        ● JOINED
-                                    </span>
+                                    <span class="my-match-status">● JOINED</span>
                                 </div>
 
                                 <h3>${escapeHTML(item.tournamentName)}</h3>
@@ -575,7 +504,6 @@ export function initHomepage() {
                                         <small>MAP</small>
                                         <strong>${escapeHTML(item.map)}</strong>
                                     </div>
-
                                     <div>
                                         <small>TIME</small>
                                         <strong>${escapeHTML(item.time)}</strong>
@@ -588,7 +516,6 @@ export function initHomepage() {
                                 >
                                     VIEW TOURNAMENT
                                 </button>
-
                             </article>
                         `).join("")}
                     </div>
@@ -597,14 +524,10 @@ export function initHomepage() {
                         <div class="empty-match-icon">🏆</div>
                         <h3>No Matches Joined Yet</h3>
                         <p>Your joined tournaments will appear here.</p>
-
-                        <button id="exploreMatches">
-                            EXPLORE TOURNAMENTS
-                        </button>
+                        <button id="exploreMatches">EXPLORE TOURNAMENTS</button>
                     </div>
                 `}
             `;
-
         } catch (error) {
             console.error("My Matches error:", error);
 
@@ -616,7 +539,6 @@ export function initHomepage() {
             `;
         }
     }
-
 
     // =================================
     // PLAYER PROFILE
@@ -640,7 +562,6 @@ export function initHomepage() {
                 <span>RAAVAN ESPORTS</span>
                 <h2>PLAYER PROFILE</h2>
             </div>
-
             <div class="profile-card">
                 <h3>Loading Profile...</h3>
             </div>
@@ -648,15 +569,13 @@ export function initHomepage() {
 
         try {
             const profileRef = doc(db, "users", user.uid);
-
             let profileSnap = await getDoc(profileRef);
 
             if (!profileSnap.exists()) {
                 const playerName =
                     user.displayName ||
-                    (user.email
-                        ? user.email.split("@")[0]
-                        : "Player");
+                    user.email?.split("@")[0] ||
+                    "Player";
 
                 const playerId =
                     "RAAVAN-" +
@@ -666,7 +585,7 @@ export function initHomepage() {
                     uid: user.uid,
                     name: playerName,
                     email: user.email || "",
-                    playerId: playerId,
+                    playerId,
                     createdAt: serverTimestamp()
                 });
 
@@ -674,9 +593,7 @@ export function initHomepage() {
             }
 
             if (!profileSnap.exists()) {
-                throw new Error(
-                    "Profile could not be created. Check Firestore rules."
-                );
+                throw new Error("Profile could not be created.");
             }
 
             const data = profileSnap.data();
@@ -693,31 +610,21 @@ export function initHomepage() {
 
                     <h3>${escapeHTML(data.name || "Player")}</h3>
 
-                    <span class="profile-badge">
-                        REGISTERED PLAYER
-                    </span>
+                    <span class="profile-badge">REGISTERED PLAYER</span>
 
                     <div class="profile-details">
                         <div>
                             <small>PLAYER ID</small>
-                            <strong>
-                                ${escapeHTML(data.playerId || "Not assigned")}
-                            </strong>
+                            <strong>${escapeHTML(data.playerId || "Not assigned")}</strong>
                         </div>
-
                         <div>
                             <small>EMAIL ADDRESS</small>
-                            <strong>
-                                ${escapeHTML(data.email || user.email || "")}
-                            </strong>
+                            <strong>${escapeHTML(data.email || user.email || "")}</strong>
                         </div>
                     </div>
 
                     <form id="editProfileForm">
-                        <label for="newPlayerName">
-                            Update Player Name
-                        </label>
-
+                        <label for="newPlayerName">Update Player Name</label>
                         <input
                             type="text"
                             id="newPlayerName"
@@ -725,11 +632,7 @@ export function initHomepage() {
                             maxlength="30"
                             required
                         >
-
-                        <button type="submit">
-                            SAVE PROFILE
-                        </button>
-
+                        <button type="submit">SAVE PROFILE</button>
                         <p id="profileMessage"></p>
                     </form>
 
@@ -738,7 +641,6 @@ export function initHomepage() {
                     </button>
                 </div>
             `;
-
         } catch (error) {
             console.error("Profile error:", error);
 
@@ -746,37 +648,14 @@ export function initHomepage() {
                 <div class="profile-card">
                     <h3>Profile could not load</h3>
                     <p>${escapeHTML(error.message)}</p>
-
-                    <button id="retryProfile">
-                        TRY AGAIN
-                    </button>
+                    <button id="retryProfile">TRY AGAIN</button>
                 </div>
             `;
         }
     }
 
-
     // =================================
-    // WALLET DATE FORMAT
-    // =================================
-
-    function formatWalletDate(timestamp) {
-        if (!timestamp || !timestamp.toDate) {
-            return "Just now";
-        }
-
-        return timestamp.toDate().toLocaleString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
-        });
-    }
-
-
-    // =================================
-    // RENDER PLAYER WALLET
+    // WALLET RENDER
     // =================================
 
     function renderWallet() {
@@ -791,19 +670,15 @@ export function initHomepage() {
             return;
         }
 
-        const history = [...walletTransactions].sort((a, b) => {
-            const timeA = a.createdAt?.toMillis?.() || 0;
-            const timeB = b.createdAt?.toMillis?.() || 0;
+        const history = [...walletTransactions].sort((a, b) =>
+            (b.createdAt?.toMillis?.() || 0) -
+            (a.createdAt?.toMillis?.() || 0)
+        );
 
-            return timeB - timeA;
-        });
-
-        const requests = [...walletRequests].sort((a, b) => {
-            const timeA = a.createdAt?.toMillis?.() || 0;
-            const timeB = b.createdAt?.toMillis?.() || 0;
-
-            return timeB - timeA;
-        });
+        const requests = [...walletRequests].sort((a, b) =>
+            (b.createdAt?.toMillis?.() || 0) -
+            (a.createdAt?.toMillis?.() || 0)
+        );
 
         walletPage.innerHTML = `
             <div class="wallet-heading">
@@ -813,31 +688,25 @@ export function initHomepage() {
             </div>
 
             <div class="wallet-balance-card">
-
                 <div class="wallet-card-top">
                     <span>AVAILABLE BALANCE</span>
                     <span class="wallet-coin-icon">◈</span>
                 </div>
 
-                <h1>
-                    ${walletBalance.toLocaleString("en-IN")}
-                </h1>
-
+                <h1>${walletBalance.toLocaleString("en-IN")}</h1>
                 <p>VIRTUAL COINS</p>
 
                 <div class="wallet-card-footer">
                     <span>RAAVAN ESPORTS</span>
                     <span>PLAYER WALLET</span>
                 </div>
-
             </div>
 
             <div class="wallet-action-grid">
-
                 <button class="wallet-action-btn" id="addCoinsBtn">
                     <span>＋</span>
                     <strong>ADD COINS</strong>
-                    <small>Send a request</small>
+                    <small>Buy coin package</small>
                 </button>
 
                 <button class="wallet-action-btn" id="walletHistoryBtn">
@@ -845,55 +714,86 @@ export function initHomepage() {
                     <strong>HISTORY</strong>
                     <small>View transactions</small>
                 </button>
-
             </div>
 
             <div class="wallet-request-box" id="walletRequestBox">
-
                 <div class="wallet-section-title">
-                    <h3>ADD VIRTUAL COINS</h3>
-                    <span>REQUEST</span>
+                    <h3>BUY RAAVAN COINS</h3>
+                    <span>UPI PAYMENT</span>
                 </div>
 
                 <p class="wallet-note">
-                    Submit a virtual coin request. An admin will review and approve or reject it.
+                    Select a package, pay using UPI and submit your UTR.
+                    Coins are credited only after admin verification.
                 </p>
 
                 <form id="coinRequestForm">
+                    <label for="coinAmount">Select Coin Package</label>
 
-                    <label for="coinAmount">
-                        Coin Amount
-                    </label>
+                    <select id="coinAmount" required>
+                        <option value="">Select package</option>
+                        ${COIN_PACKAGES.map(amount => `
+                            <option value="${amount}">
+                                ₹${amount} — ${amount} Coins
+                            </option>
+                        `).join("")}
+                    </select>
 
-                    <input
-                        type="number"
-                        id="coinAmount"
-                        min="1"
-                        max="100000"
-                        step="1"
-                        placeholder="Enter coins (e.g. 500)"
-                        required
-                    >
+                    <div class="upi-payment-box">
+                        <h3>PAYMENT DETAILS</h3>
 
-                    <label for="coinNote">
-                        Request Note (Optional)
+                        <p><strong>Payee:</strong> ${PAYEE_NAME}</p>
+
+                        <p>
+                            <strong>UPI ID:</strong>
+                            ${UPI_ID}
+                        </p>
+
+                        <button type="button" id="copyUpiBtn">
+                            COPY UPI ID
+                        </button>
+
+                        <img
+                            src="../assets/upi-qr.jpg"
+                            alt="UPI QR Code"
+                            style="width:200px;max-width:100%;display:block;margin:15px auto;"
+                        >
+
+                        <a
+                            id="payWithUpiBtn"
+                            href="#"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            PAY WITH UPI APP
+                        </a>
+                    </div>
+
+                    <label for="coinUtr">
+                        Payment UTR / Reference Number
                     </label>
 
                     <input
                         type="text"
-                        id="coinNote"
-                        maxlength="100"
-                        placeholder="Write a short note"
+                        id="coinUtr"
+                        minlength="8"
+                        maxlength="20"
+                        placeholder="Enter payment UTR"
+                        autocomplete="off"
+                        required
                     >
 
                     <button type="submit" id="submitCoinRequest">
-                        SUBMIT REQUEST
+                        SUBMIT PAYMENT
                     </button>
 
                     <p id="coinRequestMessage"></p>
 
+                    <small>
+                        Enter the actual UTR from your payment app.
+                        Admin will verify the payment before crediting coins.
+                    </small>
                 </form>
-
             </div>
 
             <div class="wallet-section-title wallet-history-heading">
@@ -902,76 +802,56 @@ export function initHomepage() {
             </div>
 
             <div class="wallet-request-list">
-
                 ${requests.length ? requests.map(item => `
                     <div class="wallet-request-item">
-
                         <div>
-                            <strong>
-                                +${Number(item.amount || 0)} Coins
-                            </strong>
-
-                            <small>
-                                ${escapeHTML(item.note || "Virtual coin request")}
-                            </small>
-
-                            <small>
-                                ${formatWalletDate(item.createdAt)}
-                            </small>
+                            <strong>+${Number(item.coins || item.amount || 0)} Coins</strong>
+                            <small>UTR: ${escapeHTML(item.utr || "N/A")}</small>
+                            <small>${formatWalletDate(item.createdAt)}</small>
                         </div>
 
                         <span class="request-status ${escapeHTML(item.status || "pending")}">
                             ${escapeHTML((item.status || "pending").toUpperCase())}
                         </span>
-
                     </div>
                 `).join("") : `
                     <div class="wallet-empty-small">
                         No coin requests yet.
                     </div>
                 `}
-
             </div>
 
-            <div class="wallet-section-title wallet-history-heading" id="walletHistory">
+            <div
+                class="wallet-section-title wallet-history-heading"
+                id="walletHistory"
+            >
                 <h3>TRANSACTION HISTORY</h3>
                 <span>${history.length} RECORDS</span>
             </div>
 
             <div class="wallet-transaction-list">
-
                 ${history.length ? history.map(item => {
                     const type = item.type || "transaction";
 
                     const title = type === "admin_bonus"
                         ? "Admin Bonus"
                         : type === "deposit_approved"
-                            ? "Request Approved"
+                            ? "UPI Payment Approved"
                             : "Wallet Transaction";
 
                     return `
                         <div class="wallet-transaction-item">
-
-                            <div class="wallet-transaction-icon">
-                                ◈
-                            </div>
+                            <div class="wallet-transaction-icon">◈</div>
 
                             <div class="wallet-transaction-info">
                                 <strong>${title}</strong>
-
-                                <small>
-                                    ${escapeHTML(item.description || "Virtual coins")}
-                                </small>
-
-                                <small>
-                                    ${formatWalletDate(item.createdAt)}
-                                </small>
+                                <small>${escapeHTML(item.description || "Virtual coins")}</small>
+                                <small>${formatWalletDate(item.createdAt)}</small>
                             </div>
 
                             <strong class="wallet-credit">
                                 +${Number(item.amount || 0)}
                             </strong>
-
                         </div>
                     `;
                 }).join("") : `
@@ -979,18 +859,17 @@ export function initHomepage() {
                         No transactions yet.
                     </div>
                 `}
-
             </div>
 
             <p class="wallet-footer-note">
-                This wallet uses virtual coins only. It does not process real-money deposits or withdrawals.
+                Coin purchases are manually verified. Coins are virtual
+                platform credits and are not a bank balance.
             </p>
         `;
     }
 
-
     // =================================
-    // START REAL-TIME WALLET LISTENERS
+    // WALLET LISTENERS
     // =================================
 
     function startWalletListeners() {
@@ -1000,10 +879,8 @@ export function initHomepage() {
 
         walletListenersStarted = true;
 
-        // WALLET BALANCE
-        unsubscribeWallet = onSnapshot(
+        onSnapshot(
             doc(db, "wallets", user.uid),
-
             snapshot => {
                 walletBalance = snapshot.exists()
                     ? Number(snapshot.data().balance || 0)
@@ -1011,22 +888,14 @@ export function initHomepage() {
 
                 renderWallet();
             },
-
-            error => {
-                console.error("Wallet balance error:", error);
-            }
+            error => console.error("Wallet balance:", error)
         );
 
-
-        // COIN REQUESTS
-        const requestQuery = query(
-            collection(db, "coinRequests"),
-            where("uid", "==", user.uid)
-        );
-
-        unsubscribeRequests = onSnapshot(
-            requestQuery,
-
+        onSnapshot(
+            query(
+                collection(db, "coinRequests"),
+                where("uid", "==", user.uid)
+            ),
             snapshot => {
                 walletRequests = snapshot.docs.map(item => ({
                     id: item.id,
@@ -1035,22 +904,14 @@ export function initHomepage() {
 
                 renderWallet();
             },
-
-            error => {
-                console.error("Wallet request error:", error);
-            }
+            error => console.error("Wallet requests:", error)
         );
 
-
-        // TRANSACTION HISTORY
-        const historyQuery = query(
-            collection(db, "walletTransactions"),
-            where("uid", "==", user.uid)
-        );
-
-        unsubscribeHistory = onSnapshot(
-            historyQuery,
-
+        onSnapshot(
+            query(
+                collection(db, "walletTransactions"),
+                where("uid", "==", user.uid)
+            ),
             snapshot => {
                 walletTransactions = snapshot.docs.map(item => ({
                     id: item.id,
@@ -1059,16 +920,53 @@ export function initHomepage() {
 
                 renderWallet();
             },
-
-            error => {
-                console.error("Wallet history error:", error);
-            }
+            error => console.error("Wallet history:", error)
         );
     }
 
+    // =================================
+    // UPI PACKAGE SELECTION
+    // =================================
+
+    walletPage.addEventListener("change", event => {
+        if (event.target.id !== "coinAmount") return;
+
+        const amount = Number(event.target.value);
+        const payButton =
+            document.getElementById("payWithUpiBtn");
+
+        if (!COIN_PACKAGES.includes(amount)) {
+            payButton.href = "#";
+            return;
+        }
+
+        const params = new URLSearchParams({
+            pa: UPI_ID,
+            pn: PAYEE_NAME,
+            am: String(amount),
+            cu: "INR"
+        });
+
+        payButton.href = `upi://pay?${params.toString()}`;
+    });
 
     // =================================
-    // SUBMIT COIN REQUEST
+    // COPY UPI ID
+    // =================================
+
+    walletPage.addEventListener("click", async event => {
+        if (!event.target.closest("#copyUpiBtn")) return;
+
+        try {
+            await navigator.clipboard.writeText(UPI_ID);
+            alert("UPI ID copied successfully!");
+        } catch (error) {
+            alert("UPI ID: " + UPI_ID);
+        }
+    });
+
+    // =================================
+    // SUBMIT UPI PAYMENT REQUEST
     // =================================
 
     walletPage.addEventListener("submit", async event => {
@@ -1087,73 +985,86 @@ export function initHomepage() {
             document.getElementById("coinAmount").value
         );
 
-        const note =
-            document.getElementById("coinNote").value.trim();
+        const utr = document.getElementById("coinUtr")
+            .value.trim().toUpperCase();
 
         const message =
             document.getElementById("coinRequestMessage");
 
-        const submitButton =
+        const button =
             document.getElementById("submitCoinRequest");
 
-        if (
-            !Number.isInteger(amount) ||
-            amount < 1 ||
-            amount > 100000
-        ) {
-            message.textContent =
-                "Enter a valid amount between 1 and 100000.";
-
+        if (!COIN_PACKAGES.includes(amount)) {
+            message.textContent = "Select a valid coin package.";
+            message.className = "wallet-message-error";
             return;
         }
 
-        submitButton.disabled = true;
-        submitButton.textContent = "SUBMITTING...";
+        if (!/^[A-Z0-9]{8,20}$/.test(utr)) {
+            message.textContent =
+                "Enter a valid UTR containing 8–20 letters/numbers.";
+
+            message.className = "wallet-message-error";
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "SUBMITTING...";
 
         try {
-            const requestData = {
+            const requestRef = doc(
+                collection(db, "coinRequests")
+            );
+
+            const claimRef = doc(db, "utrClaims", utr);
+
+            const batch = writeBatch(db);
+
+            batch.set(requestRef, {
                 uid: user.uid,
                 amount: amount,
+                coins: amount,
+                utr: utr,
                 status: "pending",
                 createdAt: serverTimestamp()
-            };
+            });
 
-            if (note) {
-                requestData.note = note;
-            }
+            batch.set(claimRef, {
+                uid: user.uid,
+                requestId: requestRef.id,
+                status: "pending",
+                createdAt: serverTimestamp()
+            });
 
-            await addDoc(
-                collection(db, "coinRequests"),
-                requestData
-            );
+            await batch.commit();
 
             event.target.reset();
 
+            document.getElementById("payWithUpiBtn").href = "#";
+
             message.textContent =
-                "Request submitted successfully! Waiting for admin approval.";
+                "Payment request submitted. Waiting for admin verification.";
 
             message.className = "wallet-message-success";
 
         } catch (error) {
-            console.error("Coin request error:", error);
+            console.error("Payment request error:", error);
 
-            message.textContent =
-                error.message || "Could not submit request.";
+            if (error.code === "permission-denied") {
+                message.textContent =
+                    "UTR may already be used, or Firestore Rules need updating.";
+            } else {
+                message.textContent =
+                    error.message || "Could not submit payment request.";
+            }
 
             message.className = "wallet-message-error";
 
         } finally {
-            // The real-time listener may have refreshed the form.
-            const currentButton =
-                document.getElementById("submitCoinRequest");
-
-            if (currentButton) {
-                currentButton.disabled = false;
-                currentButton.textContent = "SUBMIT REQUEST";
-            }
+            button.disabled = false;
+            button.textContent = "SUBMIT PAYMENT";
         }
     });
-
 
     // =================================
     // WALLET BUTTON EVENTS
@@ -1162,19 +1073,14 @@ export function initHomepage() {
     walletPage.addEventListener("click", event => {
         if (event.target.closest("#addCoinsBtn")) {
             document.getElementById("walletRequestBox")
-                ?.scrollIntoView({
-                    behavior: "smooth"
-                });
+                ?.scrollIntoView({ behavior: "smooth" });
         }
 
         if (event.target.closest("#walletHistoryBtn")) {
             document.getElementById("walletHistory")
-                ?.scrollIntoView({
-                    behavior: "smooth"
-                });
+                ?.scrollIntoView({ behavior: "smooth" });
         }
     });
-
 
     // =================================
     // PAGE NAVIGATION
@@ -1182,26 +1088,12 @@ export function initHomepage() {
 
     function showPage(page) {
         homeSections.forEach(section => {
-            section.classList.toggle(
-                "hidden",
-                page !== "home"
-            );
+            section.classList.toggle("hidden", page !== "home");
         });
 
-        matchesPage.classList.toggle(
-            "hidden",
-            page !== "matches"
-        );
-
-        profilePage.classList.toggle(
-            "hidden",
-            page !== "profile"
-        );
-
-        walletPage.classList.toggle(
-            "hidden",
-            page !== "wallet"
-        );
+        matchesPage.classList.toggle("hidden", page !== "matches");
+        profilePage.classList.toggle("hidden", page !== "profile");
+        walletPage.classList.toggle("hidden", page !== "wallet");
 
         document.querySelectorAll(".nav-btn").forEach(button => {
             button.classList.toggle(
@@ -1210,13 +1102,8 @@ export function initHomepage() {
             );
         });
 
-        if (page === "matches") {
-            renderMyMatches();
-        }
-
-        if (page === "profile") {
-            renderProfile();
-        }
+        if (page === "matches") renderMyMatches();
+        if (page === "profile") renderProfile();
 
         if (page === "wallet") {
             startWalletListeners();
@@ -1224,9 +1111,8 @@ export function initHomepage() {
         }
     }
 
-
     // =================================
-    // TOURNAMENT DETAILS
+    // TOURNAMENT DETAILS + JOIN
     // =================================
 
     function openDetails(id) {
@@ -1243,26 +1129,19 @@ export function initHomepage() {
         const capacity = Number(item.capacity || 0);
 
         const full = getTournamentStatus(item) === "full";
+        const joined = joinedTournaments.has(String(id));
 
-        const joined =
-            joinedTournaments.has(String(id));
-
-        const remainingSlots =
-            Math.max(0, capacity - players);
+        const remaining = Math.max(0, capacity - players);
 
         const progress = capacity > 0
-            ? Math.min(100, (players / capacity) * 100)
+            ? Math.min(100, players / capacity * 100)
             : 0;
 
         modal.innerHTML = `
             <div class="details-box">
-
                 <div class="details-header">
                     <span>TOURNAMENT DETAILS</span>
-
-                    <button class="close-modal" id="closeModal">
-                        ✕
-                    </button>
+                    <button class="close-modal" id="closeModal">✕</button>
                 </div>
 
                 <div class="details-logo">R</div>
@@ -1284,33 +1163,24 @@ export function initHomepage() {
                 </p>
 
                 <div class="details-grid">
-
                     <div class="details-item">
                         <small>PRIZE POOL</small>
-                        <strong>
-                            ${escapeHTML(item.prizePool ?? 0)} COINS
-                        </strong>
+                        <strong>${escapeHTML(item.prizePool ?? 0)} COINS</strong>
                     </div>
 
                     <div class="details-item">
                         <small>PER KILL REWARD</small>
-                        <strong>
-                            ${escapeHTML(item.perKillReward ?? 0)} COINS
-                        </strong>
+                        <strong>${escapeHTML(item.perKillReward ?? 0)} COINS</strong>
                     </div>
 
                     <div class="details-item">
                         <small>BOOYAH PRIZE</small>
-                        <strong>
-                            ${escapeHTML(item.booyahPrize ?? 0)} COINS
-                        </strong>
+                        <strong>${escapeHTML(item.booyahPrize ?? 0)} COINS</strong>
                     </div>
 
                     <div class="details-item">
                         <small>ENTRY FEES</small>
-                        <strong>
-                            ${escapeHTML(item.entryFees ?? 0)} COINS
-                        </strong>
+                        <strong>${escapeHTML(item.entryFees ?? 0)} COINS</strong>
                     </div>
 
                     <div class="details-item">
@@ -1327,19 +1197,12 @@ export function initHomepage() {
                         <small>PLAYERS</small>
                         <strong>${players}/${capacity}</strong>
                     </div>
-
                 </div>
 
                 <div class="slot-section">
-
                     <div class="slot-label">
-                        <span>
-                            ${full ? "Tournament Full" : "Available Slots"}
-                        </span>
-
-                        <strong>
-                            ${full ? "FULL" : remainingSlots}
-                        </strong>
+                        <span>${full ? "Tournament Full" : "Available Slots"}</span>
+                        <strong>${full ? "FULL" : remaining}</strong>
                     </div>
 
                     <div class="slot-track">
@@ -1348,7 +1211,6 @@ export function initHomepage() {
                             style="width:${progress}%"
                         ></div>
                     </div>
-
                 </div>
 
                 <button
@@ -1360,10 +1222,8 @@ export function initHomepage() {
                         ? "✓ ALREADY JOINED"
                         : full
                             ? "TOURNAMENT FULL"
-                            : "CONFIRM JOIN"
-                    }
+                            : "CONFIRM JOIN"}
                 </button>
-
             </div>
         `;
 
@@ -1421,33 +1281,28 @@ export function initHomepage() {
                                 throw new Error("You have already joined.");
                             }
 
-                            const tournamentData =
-                                tournamentSnap.data();
+                            const data = tournamentSnap.data();
 
-                            if (tournamentData.isActive === false) {
+                            if (data.isActive === false) {
                                 throw new Error("Tournament is inactive.");
                             }
 
                             const currentPlayers =
-                                Number(tournamentData.players || 0);
+                                Number(data.players || 0);
 
                             const maxPlayers =
-                                Number(tournamentData.capacity || 0);
+                                Number(data.capacity || 0);
 
                             if (
                                 !Number.isInteger(currentPlayers) ||
                                 !Number.isInteger(maxPlayers) ||
                                 maxPlayers <= 0
                             ) {
-                                throw new Error(
-                                    "Invalid tournament player count."
-                                );
+                                throw new Error("Invalid player count.");
                             }
 
                             if (currentPlayers >= maxPlayers) {
-                                throw new Error(
-                                    "Tournament is full. No slots available."
-                                );
+                                throw new Error("Tournament is full.");
                             }
 
                             const newPlayers = currentPlayers + 1;
@@ -1455,14 +1310,10 @@ export function initHomepage() {
                             transaction.set(joinRef, {
                                 uid: user.uid,
                                 tournamentId: String(id),
-                                tournamentName:
-                                    tournamentData.name || item.name,
-                                category:
-                                    tournamentData.category || item.category,
-                                map:
-                                    tournamentData.map || item.map,
-                                time:
-                                    tournamentData.time || item.time,
+                                tournamentName: data.name || item.name,
+                                category: data.category || item.category,
+                                map: data.map || item.map,
+                                time: data.time || item.time,
                                 capacity: maxPlayers,
                                 createdAt: serverTimestamp()
                             });
@@ -1476,7 +1327,6 @@ export function initHomepage() {
                     );
 
                     item.players = updatedPlayers;
-
                     joinedTournaments.add(String(id));
 
                     renderTournaments(
@@ -1485,49 +1335,30 @@ export function initHomepage() {
                     );
 
                     closeDetails();
-
                     showJoinSuccess();
 
                 } catch (error) {
                     console.error("Joining error:", error);
-
                     alert(error.message || "Joining failed.");
 
-                    const currentJoinButton =
+                    const currentButton =
                         document.getElementById("joinTournament");
 
-                    if (currentJoinButton) {
-                        const latestItem = tournaments.find(
-                            t => String(t.id) === String(id)
-                        );
-
-                        const latestFull = latestItem
-                            ? getTournamentStatus(latestItem) === "full"
-                            : false;
-
-                        currentJoinButton.disabled = latestFull;
-
-                        currentJoinButton.textContent =
-                            latestFull
-                                ? "TOURNAMENT FULL"
-                                : "CONFIRM JOIN";
+                    if (currentButton) {
+                        currentButton.disabled = false;
+                        currentButton.textContent = "CONFIRM JOIN";
                     }
                 }
             };
     }
 
-
     function closeDetails() {
         modal.classList.add("hidden");
     }
 
-
     modal.addEventListener("click", event => {
-        if (event.target === modal) {
-            closeDetails();
-        }
+        if (event.target === modal) closeDetails();
     });
-
 
     // =================================
     // CATEGORY FILTER
@@ -1535,7 +1366,6 @@ export function initHomepage() {
 
     categoryList.addEventListener("click", event => {
         const button = event.target.closest(".category-btn");
-
         if (!button) return;
 
         document.querySelectorAll(".category-btn").forEach(btn => {
@@ -1543,41 +1373,29 @@ export function initHomepage() {
         });
 
         button.classList.add("active");
-
         renderTournaments(button.dataset.category);
     });
 
-
     // =================================
-    // OPEN TOURNAMENT
+    // TOURNAMENT BUTTONS
     // =================================
 
     tournamentList.addEventListener("click", event => {
         const button = event.target.closest(".join-btn");
-
         if (!button) return;
 
         openDetails(button.dataset.id);
     });
 
-
-    // =================================
-    // MY MATCHES EVENTS
-    // =================================
-
     matchesPage.addEventListener("click", event => {
-        const viewButton =
-            event.target.closest(".my-match-view");
+        const button = event.target.closest(".my-match-view");
 
-        if (viewButton) {
-            openDetails(viewButton.dataset.id);
-        }
+        if (button) openDetails(button.dataset.id);
 
         if (event.target.closest("#exploreMatches")) {
             showPage("home");
         }
     });
-
 
     // =================================
     // PROFILE EVENTS
@@ -1600,11 +1418,6 @@ export function initHomepage() {
             renderProfile();
         }
     });
-
-
-    // =================================
-    // EDIT PROFILE
-    // =================================
 
     profilePage.addEventListener("submit", async event => {
         if (event.target.id !== "editProfileForm") return;
@@ -1649,9 +1462,8 @@ export function initHomepage() {
         }
     });
 
-
     // =================================
-    // HEADER WALLET BUTTON
+    // HEADER BUTTONS
     // =================================
 
     document.getElementById("walletBtn")
@@ -1659,20 +1471,10 @@ export function initHomepage() {
             showPage("wallet");
         });
 
-
-    // =================================
-    // NOTIFICATIONS
-    // =================================
-
     document.getElementById("notificationBtn")
         ?.addEventListener("click", () => {
             alert("No new notifications.");
         });
-
-
-    // =================================
-    // BOTTOM NAVIGATION
-    // =================================
 
     document.querySelectorAll(".nav-btn").forEach(button => {
         button.addEventListener("click", () => {
@@ -1686,9 +1488,8 @@ export function initHomepage() {
         });
     });
 
-
     // =================================
-    // INITIAL FIREBASE LOAD
+    // INITIAL LOAD
     // =================================
 
     async function initializeHome() {
@@ -1707,9 +1508,7 @@ export function initHomepage() {
             ]);
 
             renderTournaments();
-
             renderBanners();
-
             listenToTournaments(renderTournaments);
 
         } catch (error) {
