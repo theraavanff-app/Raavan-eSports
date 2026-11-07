@@ -754,7 +754,7 @@ export function initHomepage() {
                         </button>
 
                         <img
-                            src="../assets/upi-qr.jpg"
+                            src="assets/upi-qr.jpg"
                             alt="UPI QR Code"
                             style="width:200px;max-width:100%;display:block;margin:15px auto;"
                         >
