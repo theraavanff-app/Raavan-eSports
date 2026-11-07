@@ -25,6 +25,8 @@ import {
 // =====================================
 
 const ADMIN_EMAIL = "the.raavanff@gmail.com";
+const COIN_PACKAGES = [10, 20, 50, 100, 200, 500];
+
 let adminVerified = false;
 
 // =====================================
@@ -89,10 +91,10 @@ function walletEscape(value) {
 }
 
 // =====================================
-// FIREBASE ADMIN AUTHENTICATION
+// ADMIN AUTHENTICATION
 // =====================================
 
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, async user => {
 
     console.log("Firebase Admin Check:", user?.email || "NO USER");
 
@@ -114,6 +116,13 @@ onAuthStateChanged(auth, async (user) => {
     adminVerified = true;
 
     console.log("Raavan eSports Admin Verified!");
+
+    const walletNote = document.querySelector(".wallet-admin-note");
+
+    if (walletNote) {
+        walletNote.textContent =
+            "UPI payments are manually verified before coins are credited.";
+    }
 
     await loadTournaments();
     await loadCardSettings();
@@ -141,7 +150,7 @@ adminLogout.addEventListener("click", async () => {
 // CREATE TOURNAMENT
 // =====================================
 
-tournamentForm.addEventListener("submit", async (e) => {
+tournamentForm.addEventListener("submit", async e => {
 
     e.preventDefault();
 
@@ -234,7 +243,7 @@ async function loadTournaments() {
 
         tournamentList.innerHTML = "";
 
-        snapshot.forEach((item) => {
+        snapshot.forEach(item => {
 
             const data = item.data();
             const card = document.createElement("div");
@@ -291,10 +300,9 @@ async function loadTournaments() {
 
 // =====================================
 // TOURNAMENT BUTTONS
-// VIEW PLAYERS + DELETE
 // =====================================
 
-tournamentList.addEventListener("click", async (e) => {
+tournamentList.addEventListener("click", async e => {
 
     if (!adminVerified) return;
 
@@ -302,10 +310,11 @@ tournamentList.addEventListener("click", async (e) => {
 
     if (viewButton) {
 
-        const tournamentId = viewButton.dataset.id;
-        const tournamentName = viewButton.dataset.name;
+        await loadJoinedPlayers(
+            viewButton.dataset.id,
+            viewButton.dataset.name
+        );
 
-        await loadJoinedPlayers(tournamentId, tournamentName);
         return;
     }
 
@@ -386,7 +395,7 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
         }
 
         const players = await Promise.all(
-            joinSnapshot.docs.map(async (joinDoc) => {
+            joinSnapshot.docs.map(async joinDoc => {
 
                 const joinData = joinDoc.data();
 
@@ -397,7 +406,6 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
                 );
 
                 if (!userSnapshot.exists()) {
-
                     return {
                         name: "Player",
                         playerId: "Not available"
@@ -471,7 +479,7 @@ async function loadCardSettings() {
 
         const settings = settingsSnap.data();
 
-        Object.keys(settings).forEach((key) => {
+        Object.keys(settings).forEach(key => {
 
             const checkbox =
                 cardSettingsForm.elements.namedItem(key);
@@ -490,7 +498,7 @@ async function loadCardSettings() {
 // SAVE CARD SETTINGS
 // =====================================
 
-cardSettingsForm.addEventListener("submit", async (e) => {
+cardSettingsForm.addEventListener("submit", async e => {
 
     e.preventDefault();
 
@@ -511,10 +519,12 @@ cardSettingsForm.addEventListener("submit", async (e) => {
 
         const settings = {};
 
-        fields.forEach((field) => {
+        fields.forEach(field => {
 
-            settings[field] =
-                cardSettingsForm.elements.namedItem(field).checked;
+            const checkbox =
+                cardSettingsForm.elements.namedItem(field);
+
+            settings[field] = checkbox.checked;
         });
 
         await setDoc(
@@ -538,7 +548,7 @@ cardSettingsForm.addEventListener("submit", async (e) => {
 // ADD BANNER
 // =====================================
 
-bannerForm.addEventListener("submit", async (e) => {
+bannerForm.addEventListener("submit", async e => {
 
     e.preventDefault();
 
@@ -604,7 +614,7 @@ async function loadBanners() {
 
         bannerList.innerHTML = "";
 
-        snapshot.forEach((item) => {
+        snapshot.forEach(item => {
 
             const data = item.data();
 
@@ -652,7 +662,7 @@ async function loadBanners() {
 // DELETE BANNER
 // =====================================
 
-bannerList.addEventListener("click", async (e) => {
+bannerList.addEventListener("click", async e => {
 
     const button = e.target.closest(".delete-banner");
 
@@ -735,22 +745,35 @@ async function loadCoinRequests() {
 
             const status = request.status || "pending";
 
+            const amount = Number(request.amount || 0);
+            const coins = Number(request.coins || 0);
+
             card.innerHTML = `
-                <h4>${walletEscape(request.uid)}</h4>
+                <h4>Player UID: ${walletEscape(request.uid)}</h4>
+
+                <p>
+                    Payment:
+                    <strong>₹${walletEscape(amount)}</strong>
+                </p>
 
                 <p>
                     Coins:
-                    <strong>${walletEscape(request.amount)}</strong>
+                    <strong>${walletEscape(coins)}</strong>
+                </p>
+
+                <p>
+                    UTR:
+                    <strong>${walletEscape(request.utr || "Missing")}</strong>
                 </p>
 
                 <p>
                     Status:
-                    ${walletEscape(status.toUpperCase())}
+                    <strong>${walletEscape(status.toUpperCase())}</strong>
                 </p>
 
                 <p>
                     Request ID:
-                    ${walletEscape(request.id)}
+                    <small>${walletEscape(request.id)}</small>
                 </p>
 
                 ${
@@ -760,15 +783,13 @@ async function loadCoinRequests() {
 
                             <button
                                 class="approve-coin-request"
-                                data-id="${walletEscape(request.id)}"
-                            >
+                                data-id="${walletEscape(request.id)}">
                                 APPROVE
                             </button>
 
                             <button
                                 class="reject-coin-request"
-                                data-id="${walletEscape(request.id)}"
-                            >
+                                data-id="${walletEscape(request.id)}">
                                 REJECT
                             </button>
 
@@ -791,10 +812,10 @@ async function loadCoinRequests() {
 }
 
 // =====================================
-// APPROVE / REJECT COIN REQUESTS
+// APPROVE / REJECT UPI REQUEST
 // =====================================
 
-coinRequestsList.addEventListener("click", async (e) => {
+coinRequestsList.addEventListener("click", async e => {
 
     if (!adminVerified) return;
 
@@ -811,10 +832,12 @@ coinRequestsList.addEventListener("click", async (e) => {
     const requestId = button.dataset.id;
     const approve = Boolean(approveButton);
 
+    if (button.disabled) return;
+
     if (!confirm(
         approve
-        ? "Approve this virtual coin request?"
-        : "Reject this virtual coin request?"
+        ? "Have you verified this UPI payment in your bank/UPI app? Approve and credit coins?"
+        : "Are you sure you want to reject this payment request?"
     )) {
         return;
     }
@@ -825,13 +848,15 @@ coinRequestsList.addEventListener("click", async (e) => {
 
         const requestRef = doc(db, "coinRequests", requestId);
 
-        await runTransaction(db, async (transaction) => {
+        await runTransaction(db, async transaction => {
+
+            // READ REQUEST FIRST
 
             const requestSnap =
                 await transaction.get(requestRef);
 
             if (!requestSnap.exists()) {
-                throw new Error("Request not found.");
+                throw new Error("Payment request not found.");
             }
 
             const request = requestSnap.data();
@@ -842,14 +867,44 @@ coinRequestsList.addEventListener("click", async (e) => {
                 );
             }
 
+            const amount = Number(request.amount);
+            const coins = Number(request.coins);
+            const uid = request.uid;
+            const utr = String(request.utr || "").trim().toUpperCase();
+
             if (
-                !Number.isInteger(request.amount) ||
-                request.amount < 1 ||
-                request.amount > 100000 ||
-                !request.uid
+                !uid ||
+                !COIN_PACKAGES.includes(amount) ||
+                coins !== amount ||
+                !/^[A-Z0-9]{8,20}$/.test(utr)
             ) {
-                throw new Error("Invalid request details.");
+                throw new Error("Invalid payment request details.");
             }
+
+            // READ UTR CLAIM
+
+            const claimRef = doc(db, "utrClaims", utr);
+
+            const claimSnap =
+                await transaction.get(claimRef);
+
+            if (!claimSnap.exists()) {
+                throw new Error("UTR claim not found. Cannot process.");
+            }
+
+            const claim = claimSnap.data();
+
+            if (
+                claim.uid !== uid ||
+                claim.requestId !== requestId ||
+                claim.status !== "pending"
+            ) {
+                throw new Error(
+                    "UTR claim does not match this request."
+                );
+            }
+
+            // REJECT REQUEST
 
             if (!approve) {
 
@@ -859,10 +914,17 @@ coinRequestsList.addEventListener("click", async (e) => {
                     processedBy: auth.currentUser.email
                 });
 
+                transaction.update(claimRef, {
+                    status: "rejected",
+                    processedAt: serverTimestamp()
+                });
+
                 return;
             }
 
-            const walletRef = doc(db, "wallets", request.uid);
+            // READ WALLET
+
+            const walletRef = doc(db, "wallets", uid);
 
             const walletSnap =
                 await transaction.get(walletRef);
@@ -874,29 +936,38 @@ coinRequestsList.addEventListener("click", async (e) => {
             if (
                 !Number.isSafeInteger(currentBalance) ||
                 currentBalance < 0 ||
-                currentBalance + request.amount > 1000000000
+                currentBalance + coins > 1000000000
             ) {
                 throw new Error("Invalid wallet balance.");
             }
 
+            // DETERMINISTIC TRANSACTION ID
+            // ONE REQUEST = ONE CREDIT RECORD
+
+            const historyRef = doc(
+                db,
+                "walletTransactions",
+                "deposit_" + requestId
+            );
+
+            const historySnap =
+                await transaction.get(historyRef);
+
+            if (historySnap.exists()) {
+                throw new Error(
+                    "A transaction already exists for this request."
+                );
+            }
+
+            // CREDIT WALLET
+
             transaction.set(walletRef, {
-                uid: request.uid,
-                balance: currentBalance + request.amount,
+                uid: uid,
+                balance: currentBalance + coins,
                 updatedAt: serverTimestamp()
             }, { merge: true });
 
-            const historyRef = doc(
-                collection(db, "walletTransactions")
-            );
-
-            transaction.set(historyRef, {
-                uid: request.uid,
-                amount: request.amount,
-                type: "deposit_approved",
-                description: "Virtual coin request approved",
-                requestId: requestId,
-                createdAt: serverTimestamp()
-            });
+            // UPDATE REQUEST
 
             transaction.update(requestRef, {
                 status: "approved",
@@ -904,21 +975,39 @@ coinRequestsList.addEventListener("click", async (e) => {
                 processedBy: auth.currentUser.email
             });
 
+            // UPDATE UTR CLAIM
+
+            transaction.update(claimRef, {
+                status: "approved",
+                processedAt: serverTimestamp()
+            });
+
+            // CREATE TRANSACTION HISTORY
+
+            transaction.set(historyRef, {
+                uid: uid,
+                amount: coins,
+                type: "deposit_approved",
+                description: "UPI coin package approved - ₹" + amount,
+                requestId: requestId,
+                createdAt: serverTimestamp()
+            });
+
         });
 
         alert(
             approve
-            ? "Virtual coins added successfully!"
-            : "Request rejected successfully."
+            ? "Payment approved! Coins credited successfully."
+            : "Payment request rejected successfully."
         );
 
         await loadWalletManagement();
 
     } catch (error) {
 
-        console.error("Request processing error:", error);
+        console.error("Payment processing error:", error);
 
-        alert(error.message || "Request processing failed.");
+        alert(error.message || "Payment processing failed.");
 
         button.disabled = false;
     }
@@ -928,7 +1017,7 @@ coinRequestsList.addEventListener("click", async (e) => {
 // ADMIN BONUS COINS
 // =====================================
 
-bonusForm.addEventListener("submit", async (e) => {
+bonusForm.addEventListener("submit", async e => {
 
     e.preventDefault();
 
@@ -967,7 +1056,7 @@ bonusForm.addEventListener("submit", async (e) => {
             );
         }
 
-        await runTransaction(db, async (transaction) => {
+        await runTransaction(db, async transaction => {
 
             const walletRef = doc(db, "wallets", uid);
 
@@ -986,15 +1075,15 @@ bonusForm.addEventListener("submit", async (e) => {
                 throw new Error("Invalid wallet balance.");
             }
 
+            const historyRef = doc(
+                collection(db, "walletTransactions")
+            );
+
             transaction.set(walletRef, {
                 uid: uid,
                 balance: currentBalance + amount,
                 updatedAt: serverTimestamp()
             }, { merge: true });
-
-            const historyRef = doc(
-                collection(db, "walletTransactions")
-            );
 
             transaction.set(historyRef, {
                 uid: uid,
@@ -1107,7 +1196,9 @@ refreshRequests.addEventListener("click", async () => {
 
     refreshRequests.disabled = true;
 
-    await loadWalletManagement();
-
-    refreshRequests.disabled = false;
+    try {
+        await loadWalletManagement();
+    } finally {
+        refreshRequests.disabled = false;
+    }
 });
