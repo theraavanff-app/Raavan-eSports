@@ -1,4 +1,3 @@
-
 import { auth, db } from "./firebase.js";
 
 import {
@@ -52,7 +51,6 @@ function escapeHTML(value) {
 
 // TOURNAMENT STATUS
 function getTournamentStatus(item) {
-
     const players = Number(item.players || 0);
     const capacity = Number(item.capacity || 0);
 
@@ -66,7 +64,6 @@ function getTournamentStatus(item) {
 
 // LOAD TOURNAMENTS
 async function loadTournaments() {
-
     const snapshot = await getDocs(
         collection(db, "tournaments")
     );
@@ -82,16 +79,13 @@ async function loadTournaments() {
 
 // REAL-TIME TOURNAMENT UPDATES
 function listenToTournaments(renderTournaments) {
-
     if (unsubscribeTournaments) {
         unsubscribeTournaments();
     }
 
     unsubscribeTournaments = onSnapshot(
         collection(db, "tournaments"),
-
         snapshot => {
-
             tournaments = snapshot.docs
                 .map(item => ({
                     id: item.id,
@@ -104,9 +98,7 @@ function listenToTournaments(renderTournaments) {
                     ?.dataset.category || "All";
 
             renderTournaments(activeCategory);
-
         },
-
         error => {
             console.error("Tournament listener error:", error);
         }
@@ -116,7 +108,6 @@ function listenToTournaments(renderTournaments) {
 
 // LOAD JOINED TOURNAMENTS
 async function loadJoinedTournaments() {
-
     joinedTournaments.clear();
 
     const user = auth.currentUser;
@@ -139,7 +130,6 @@ async function loadJoinedTournaments() {
 
 // LOAD CARD SETTINGS
 async function loadCardSettings() {
-
     const snapshot = await getDoc(
         doc(db, "appSettings", "cardFields")
     );
@@ -155,7 +145,6 @@ async function loadCardSettings() {
 
 // LOAD BANNERS
 async function loadBanners() {
-
     const snapshot = await getDocs(
         collection(db, "banners")
     );
@@ -171,7 +160,6 @@ async function loadBanners() {
 
 // MAIN HOMEPAGE
 export function initHomepage() {
-
     const tournamentList =
         document.getElementById("tournamentList");
 
@@ -211,11 +199,8 @@ export function initHomepage() {
 
 
     function showJoinSuccess() {
-
         successToast.classList.remove("show");
-
         void successToast.offsetWidth;
-
         successToast.classList.add("show");
 
         setTimeout(() => {
@@ -241,7 +226,6 @@ export function initHomepage() {
     // =================================
 
     function renderBanners() {
-
         const bannerContainer =
             document.getElementById("bannerSlider") ||
             document.querySelector(".hero-banner");
@@ -270,7 +254,6 @@ export function initHomepage() {
         let currentIndex = 0;
 
         function showBanner(index) {
-
             const imageUrl = banners[index].imageUrl;
 
             bannerContainer.style.backgroundImage =
@@ -284,25 +267,21 @@ export function initHomepage() {
         showBanner(currentIndex);
 
         if (banners.length > 1) {
-
             bannerTimer = setInterval(() => {
-
                 currentIndex =
                     (currentIndex + 1) % banners.length;
 
                 showBanner(currentIndex);
-
             }, 4000);
         }
     }
 
 
     // =================================
-    // RENDER TOURNAMENTS
+    // COMPACT TOURNAMENT CARDS
     // =================================
 
     function renderTournaments(category = "All") {
-
         const filtered = category === "All"
             ? tournaments
             : tournaments.filter(item =>
@@ -310,20 +289,15 @@ export function initHomepage() {
             );
 
         if (!filtered.length) {
-
             tournamentList.innerHTML = `
                 <div class="empty-state">
                     No tournaments available.
                 </div>
             `;
-
             return;
         }
 
         tournamentList.innerHTML = filtered.map(item => {
-
-            const info = [];
-
             const players = Number(item.players || 0);
             const capacity = Number(item.capacity || 0);
 
@@ -336,42 +310,32 @@ export function initHomepage() {
             const remainingSlots =
                 Math.max(0, capacity - players);
 
-            if (cardSettings.prizePool) {
+            // Only 3 metrics on the compact card
+            const info = [];
 
+            if (cardSettings.prizePool) {
                 info.push(`
                     <div class="info-box">
                         <small>PRIZE POOL</small>
-                        <strong>${escapeHTML(item.prizePool ?? 0)} COINS</strong>
+                        <strong>${escapeHTML(item.prizePool ?? 0)} <small class="coin-unit">COINS</small></strong>
                     </div>
                 `);
             }
 
             if (cardSettings.perKillReward) {
-
                 info.push(`
                     <div class="info-box">
-                        <small>PER KILL REWARD</small>
-                        <strong>${escapeHTML(item.perKillReward ?? 0)} COINS</strong>
-                    </div>
-                `);
-            }
-
-            if (cardSettings.booyahPrize) {
-
-                info.push(`
-                    <div class="info-box">
-                        <small>BOOYAH PRIZE</small>
-                        <strong>${escapeHTML(item.booyahPrize ?? 0)} COINS</strong>
+                        <small>PER KILL</small>
+                        <strong>${escapeHTML(item.perKillReward ?? 0)} <small class="coin-unit">COINS</small></strong>
                     </div>
                 `);
             }
 
             if (cardSettings.entryFees) {
-
                 info.push(`
                     <div class="info-box">
                         <small>ENTRY FEES</small>
-                        <strong>${escapeHTML(item.entryFees ?? 0)} COINS</strong>
+                        <strong>${escapeHTML(item.entryFees ?? 0)} <small class="coin-unit">COINS</small></strong>
                     </div>
                 `);
             }
@@ -379,31 +343,23 @@ export function initHomepage() {
             const lowerInfo = [];
 
             if (cardSettings.map) {
-
                 lowerInfo.push(`
-                    <span>🗺️ ${escapeHTML(item.map)}</span>
+                    <span>🗺️ ${escapeHTML(item.map || "TBA")}</span>
                 `);
             }
 
             if (cardSettings.playersCount) {
-
                 lowerInfo.push(`
                     <span>👥 ${players}/${capacity}</span>
                 `);
             }
 
-            const progress =
-                capacity > 0
-                    ? Math.min(100, (players / capacity) * 100)
-                    : 0;
-
             return `
                 <article class="tournament-card">
 
                     <div class="tournament-top">
-
                         <span class="tournament-type">
-                            ${escapeHTML(item.category)} MATCH
+                            ${escapeHTML(item.category || "MATCH")} MATCH
                         </span>
 
                         ${full ? `
@@ -412,13 +368,12 @@ export function initHomepage() {
                             </span>
                         ` : `
                             <span class="match-status">
-                                ● Upcoming
+                                ● UPCOMING
                             </span>
                         `}
-
                     </div>
 
-                    <h4>${escapeHTML(item.name)}</h4>
+                    <h4>${escapeHTML(item.name || "Tournament")}</h4>
 
                     <div class="tournament-info">
                         ${info.join("")}
@@ -431,23 +386,13 @@ export function initHomepage() {
                     ` : ""}
 
                     <div class="card-slot-section">
-
                         <div class="card-slot-label">
                             <span>${full ? "Tournament Full" : "Available Slots"}</span>
                             <strong>${full ? "FULL" : remainingSlots}</strong>
                         </div>
-
-                        <div class="card-slot-track">
-                            <div
-                                class="card-slot-progress ${full ? "full-progress" : ""}"
-                                style="width:${progress}%"
-                            ></div>
-                        </div>
-
                     </div>
 
                     <div class="join-row">
-
                         <button
                             class="join-btn ${full ? "full-join-btn" : ""}"
                             data-id="${escapeHTML(item.id)}"
@@ -456,15 +401,13 @@ export function initHomepage() {
                                 ? "VIEW TOURNAMENT"
                                 : full
                                     ? "TOURNAMENT FULL"
-                                    : "JOIN TOURNAMENT"
+                                    : "VIEW & JOIN"
                             }
                         </button>
-
                     </div>
 
                 </article>
             `;
-
         }).join("");
     }
 
@@ -474,17 +417,14 @@ export function initHomepage() {
     // =================================
 
     async function renderMyMatches() {
-
         const user = auth.currentUser;
 
         if (!user) {
-
             matchesPage.innerHTML = `
                 <div class="matches-empty">
                     <h3>Please Login First</h3>
                 </div>
             `;
-
             return;
         }
 
@@ -497,7 +437,6 @@ export function initHomepage() {
         `;
 
         try {
-
             const q = query(
                 collection(db, "tournamentJoins"),
                 where("uid", "==", user.uid)
@@ -512,7 +451,6 @@ export function initHomepage() {
 
             const checkedMatches = await Promise.all(
                 allMatches.map(async item => {
-
                     const tournamentSnap = await getDoc(
                         doc(db, "tournaments", String(item.tournamentId))
                     );
@@ -538,11 +476,8 @@ export function initHomepage() {
 
                 ${matches.length ? `
                     <div class="my-match-list">
-
                         ${matches.map(item => `
-
                             <article class="my-match-card">
-
                                 <div class="my-match-top">
                                     <span>${escapeHTML(item.category)}</span>
                                     <span class="my-match-status">● JOINED</span>
@@ -551,7 +486,6 @@ export function initHomepage() {
                                 <h3>${escapeHTML(item.tournamentName)}</h3>
 
                                 <div class="my-match-info">
-
                                     <div>
                                         <small>MAP</small>
                                         <strong>${escapeHTML(item.map)}</strong>
@@ -561,7 +495,6 @@ export function initHomepage() {
                                         <small>TIME</small>
                                         <strong>${escapeHTML(item.time)}</strong>
                                     </div>
-
                                 </div>
 
                                 <button
@@ -570,30 +503,21 @@ export function initHomepage() {
                                 >
                                     VIEW TOURNAMENT
                                 </button>
-
                             </article>
-
                         `).join("")}
-
                     </div>
-
                 ` : `
-
                     <div class="matches-empty">
                         <div class="empty-match-icon">🏆</div>
                         <h3>No Matches Joined Yet</h3>
                         <p>Your joined tournaments will appear here.</p>
-
                         <button id="exploreMatches">
                             EXPLORE TOURNAMENTS
                         </button>
                     </div>
-
                 `}
             `;
-
         } catch (error) {
-
             console.error("My Matches error:", error);
 
             matchesPage.innerHTML = `
@@ -611,18 +535,15 @@ export function initHomepage() {
     // =================================
 
     async function renderProfile() {
-
         const user = auth.currentUser;
 
         if (!user) {
-
             profilePage.innerHTML = `
                 <div class="profile-card">
                     <h3>Please Login First</h3>
                     <p>Your session is not available.</p>
                 </div>
             `;
-
             return;
         }
 
@@ -631,25 +552,20 @@ export function initHomepage() {
                 <span>RAAVAN ESPORTS</span>
                 <h2>PLAYER PROFILE</h2>
             </div>
-
             <div class="profile-card">
                 <h3>Loading Profile...</h3>
             </div>
         `;
 
         try {
-
             const profileRef = doc(db, "users", user.uid);
 
             let profileSnap = await getDoc(profileRef);
 
             if (!profileSnap.exists()) {
-
                 const playerName =
                     user.displayName ||
-                    (user.email
-                        ? user.email.split("@")[0]
-                        : "Player");
+                    (user.email ? user.email.split("@")[0] : "Player");
 
                 const playerId =
                     "RAAVAN-" +
@@ -675,7 +591,6 @@ export function initHomepage() {
             const data = profileSnap.data();
 
             profilePage.innerHTML = `
-
                 <div class="profile-heading">
                     <span>RAAVAN ESPORTS</span>
                     <h2>PLAYER PROFILE</h2>
@@ -683,7 +598,6 @@ export function initHomepage() {
                 </div>
 
                 <div class="profile-card">
-
                     <div class="profile-avatar">R</div>
 
                     <h3>${escapeHTML(data.name || "Player")}</h3>
@@ -693,7 +607,6 @@ export function initHomepage() {
                     </span>
 
                     <div class="profile-details">
-
                         <div>
                             <small>PLAYER ID</small>
                             <strong>${escapeHTML(data.playerId || "Not assigned")}</strong>
@@ -703,11 +616,9 @@ export function initHomepage() {
                             <small>EMAIL ADDRESS</small>
                             <strong>${escapeHTML(data.email || user.email || "")}</strong>
                         </div>
-
                     </div>
 
                     <form id="editProfileForm">
-
                         <label for="newPlayerName">
                             Update Player Name
                         </label>
@@ -725,25 +636,20 @@ export function initHomepage() {
                         </button>
 
                         <p id="profileMessage"></p>
-
                     </form>
 
                     <button id="logoutBtn" class="logout-btn">
                         LOG OUT
                     </button>
-
                 </div>
             `;
-
         } catch (error) {
-
             console.error("Profile error:", error);
 
             profilePage.innerHTML = `
                 <div class="profile-card">
                     <h3>Profile could not load</h3>
                     <p>${escapeHTML(error.message)}</p>
-
                     <button id="retryProfile">
                         TRY AGAIN
                     </button>
@@ -758,7 +664,6 @@ export function initHomepage() {
     // =================================
 
     function showPage(page) {
-
         homeSections.forEach(section => {
             section.classList.toggle(
                 "hidden",
@@ -777,7 +682,6 @@ export function initHomepage() {
         );
 
         document.querySelectorAll(".nav-btn").forEach(button => {
-
             button.classList.toggle(
                 "active",
                 button.dataset.page === page
@@ -785,7 +689,6 @@ export function initHomepage() {
         });
 
         if (page === "matches") renderMyMatches();
-
         if (page === "profile") renderProfile();
     }
 
@@ -795,15 +698,12 @@ export function initHomepage() {
     // =================================
 
     function openDetails(id) {
-
         const item = tournaments.find(t =>
             String(t.id) === String(id)
         );
 
         if (!item) {
-
             alert("This tournament is no longer available.");
-
             return;
         }
 
@@ -824,7 +724,6 @@ export function initHomepage() {
                 : 0;
 
         modal.innerHTML = `
-
             <div class="details-box">
 
                 <div class="details-header">
@@ -851,7 +750,6 @@ export function initHomepage() {
                 </p>
 
                 <div class="details-grid">
-
                     <div class="details-item">
                         <small>PRIZE POOL</small>
                         <strong>${escapeHTML(item.prizePool ?? 0)} COINS</strong>
@@ -886,25 +784,20 @@ export function initHomepage() {
                         <small>PLAYERS</small>
                         <strong>${players}/${capacity}</strong>
                     </div>
-
                 </div>
 
                 <div class="slot-section">
-
                     <div class="slot-label">
                         <span>${full ? "Tournament Full" : "Available Slots"}</span>
                         <strong>${full ? "FULL" : remainingSlots}</strong>
                     </div>
 
                     <div class="slot-track">
-
                         <div
                             class="slot-progress ${full ? "full-progress" : ""}"
                             style="width:${progress}%"
                         ></div>
-
                     </div>
-
                 </div>
 
                 <button
@@ -919,7 +812,6 @@ export function initHomepage() {
                             : "CONFIRM JOIN"
                     }
                 </button>
-
             </div>
         `;
 
@@ -928,10 +820,8 @@ export function initHomepage() {
         document.getElementById("closeModal").onclick =
             closeDetails;
 
-
         document.getElementById("joinTournament").onclick =
             async () => {
-
                 const user = auth.currentUser;
 
                 if (!user) {
@@ -947,11 +837,9 @@ export function initHomepage() {
                     document.getElementById("joinTournament");
 
                 joinButton.disabled = true;
-
                 joinButton.textContent = "JOINING...";
 
                 try {
-
                     const joinRef = doc(
                         db,
                         "tournamentJoins",
@@ -966,9 +854,7 @@ export function initHomepage() {
 
                     const updatedPlayers = await runTransaction(
                         db,
-
                         async transaction => {
-
                             const tournamentSnap =
                                 await transaction.get(tournamentRef);
 
@@ -1012,31 +898,21 @@ export function initHomepage() {
                                 );
                             }
 
-                            const newPlayers =
-                                currentPlayers + 1;
+                            const newPlayers = currentPlayers + 1;
 
                             transaction.set(joinRef, {
-
                                 uid: user.uid,
-
                                 tournamentId: String(id),
-
                                 tournamentName:
                                     tournamentData.name || item.name,
-
                                 category:
                                     tournamentData.category || item.category,
-
                                 map:
                                     tournamentData.map || item.map,
-
                                 time:
                                     tournamentData.time || item.time,
-
                                 capacity: maxPlayers,
-
                                 createdAt: serverTimestamp()
-
                             });
 
                             transaction.update(tournamentRef, {
@@ -1048,7 +924,6 @@ export function initHomepage() {
                     );
 
                     item.players = updatedPlayers;
-
                     joinedTournaments.add(String(id));
 
                     renderTournaments(
@@ -1057,20 +932,16 @@ export function initHomepage() {
                     );
 
                     closeDetails();
-
                     showJoinSuccess();
 
                 } catch (error) {
-
                     console.error("Joining error:", error);
-
                     alert(error.message || "Joining failed.");
 
                     const currentJoinButton =
                         document.getElementById("joinTournament");
 
                     if (currentJoinButton) {
-
                         const latestItem = tournaments.find(
                             t => String(t.id) === String(id)
                         );
@@ -1096,7 +967,6 @@ export function initHomepage() {
     }
 
     modal.addEventListener("click", event => {
-
         if (event.target === modal) {
             closeDetails();
         }
@@ -1108,7 +978,6 @@ export function initHomepage() {
     // =================================
 
     categoryList.addEventListener("click", event => {
-
         const button = event.target.closest(".category-btn");
 
         if (!button) return;
@@ -1128,7 +997,6 @@ export function initHomepage() {
     // =================================
 
     tournamentList.addEventListener("click", event => {
-
         const button = event.target.closest(".join-btn");
 
         if (!button) return;
@@ -1142,7 +1010,6 @@ export function initHomepage() {
     // =================================
 
     matchesPage.addEventListener("click", event => {
-
         const viewButton =
             event.target.closest(".my-match-view");
 
@@ -1161,9 +1028,7 @@ export function initHomepage() {
     // =================================
 
     profilePage.addEventListener("click", async event => {
-
         if (event.target.closest("#logoutBtn")) {
-
             if (!confirm("Are you sure you want to logout?")) return;
 
             try {
@@ -1184,7 +1049,6 @@ export function initHomepage() {
     // =================================
 
     profilePage.addEventListener("submit", async event => {
-
         if (event.target.id !== "editProfileForm") return;
 
         event.preventDefault();
@@ -1203,11 +1067,9 @@ export function initHomepage() {
             event.target.querySelector('button[type="submit"]');
 
         button.disabled = true;
-
         button.textContent = "SAVING...";
 
         try {
-
             await updateDoc(
                 doc(db, "users", user.uid),
                 { name }
@@ -1220,13 +1082,11 @@ export function initHomepage() {
             await renderProfile();
 
         } catch (error) {
-
             console.error("Profile update error:", error);
 
             message.textContent = error.message;
 
             button.disabled = false;
-
             button.textContent = "SAVE PROFILE";
         }
     });
@@ -1238,7 +1098,6 @@ export function initHomepage() {
 
     document.getElementById("walletBtn")
         ?.addEventListener("click", () => {
-
             alert(
                 "Demo Points Wallet will be added in the next update."
             );
@@ -1251,7 +1110,6 @@ export function initHomepage() {
 
     document.getElementById("notificationBtn")
         ?.addEventListener("click", () => {
-
             alert("No new notifications.");
         });
 
@@ -1261,9 +1119,7 @@ export function initHomepage() {
     // =================================
 
     document.querySelectorAll(".nav-btn").forEach(button => {
-
         button.addEventListener("click", () => {
-
             const page = button.dataset.page;
 
             if (["home", "matches", "profile"].includes(page)) {
@@ -1280,7 +1136,6 @@ export function initHomepage() {
     // =================================
 
     async function initializeHome() {
-
         tournamentList.innerHTML = `
             <div class="empty-state">
                 Loading tournaments...
@@ -1288,7 +1143,6 @@ export function initHomepage() {
         `;
 
         try {
-
             await Promise.all([
                 loadTournaments(),
                 loadJoinedTournaments(),
@@ -1297,14 +1151,11 @@ export function initHomepage() {
             ]);
 
             renderTournaments();
-
             renderBanners();
 
-            // Automatically update cards when player count changes
             listenToTournaments(renderTournaments);
 
         } catch (error) {
-
             console.error("Homepage loading error:", error);
 
             tournamentList.innerHTML = `
