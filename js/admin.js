@@ -1,3 +1,4 @@
+
 import { auth, db } from "./firebase.js";
 
 import {
@@ -15,7 +16,8 @@ import {
     getDoc,
     query,
     where,
-    serverTimestamp
+    serverTimestamp,
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 // =====================================
@@ -54,6 +56,20 @@ const joinedPlayersCount =
 const joinedPlayersList =
     document.getElementById("joinedPlayersList");
 
+// WALLET ELEMENTS
+
+const bonusForm = document.getElementById("bonusForm");
+const bonusMessage = document.getElementById("bonusMessage");
+
+const coinRequestsList =
+    document.getElementById("coinRequestsList");
+
+const adminWalletHistory =
+    document.getElementById("adminWalletHistory");
+
+const refreshRequests =
+    document.getElementById("refreshRequests");
+
 // =====================================
 // SAFE HTML
 // =====================================
@@ -66,6 +82,10 @@ function escapeHTML(value) {
         '"': "&quot;",
         "'": "&#39;"
     })[char]);
+}
+
+function walletEscape(value) {
+    return escapeHTML(value);
 }
 
 // =====================================
@@ -98,6 +118,7 @@ onAuthStateChanged(auth, async (user) => {
     await loadTournaments();
     await loadCardSettings();
     await loadBanners();
+    await loadWalletManagement();
 });
 
 // =====================================
@@ -185,6 +206,7 @@ tournamentForm.addEventListener("submit", async (e) => {
     } catch (error) {
 
         console.error("Tournament creation error:", error);
+
         tournamentMessage.textContent =
             error.message || "Something went wrong.";
     }
@@ -261,6 +283,7 @@ async function loadTournaments() {
     } catch (error) {
 
         console.error("Tournament loading error:", error);
+
         tournamentList.textContent =
             "Unable to load tournaments: " + error.message;
     }
@@ -275,19 +298,17 @@ tournamentList.addEventListener("click", async (e) => {
 
     if (!adminVerified) return;
 
-    // VIEW PLAYERS
     const viewButton = e.target.closest(".view-players");
 
     if (viewButton) {
 
-    const tournamentId = viewButton.dataset.id;
-    const tournamentName = viewButton.dataset.name;
+        const tournamentId = viewButton.dataset.id;
+        const tournamentName = viewButton.dataset.name;
 
-    await loadJoinedPlayers(tournamentId, tournamentName);
-    return;
+        await loadJoinedPlayers(tournamentId, tournamentName);
+        return;
     }
 
-    // DELETE TOURNAMENT
     const deleteButton = e.target.closest(".delete-tournament");
 
     if (!deleteButton) return;
@@ -314,6 +335,7 @@ tournamentList.addEventListener("click", async (e) => {
     } catch (error) {
 
         console.error("Tournament delete error:", error);
+
         alert("Tournament delete failed: " + error.message);
     }
 });
@@ -363,7 +385,6 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
             return;
         }
 
-        // Fetch player profiles
         const players = await Promise.all(
             joinSnapshot.docs.map(async (joinDoc) => {
 
@@ -653,4 +674,440 @@ bannerList.addEventListener("click", async (e) => {
 
         alert("Banner delete failed: " + error.message);
     }
+});
+
+// =====================================
+// WALLET MANAGEMENT
+// =====================================
+
+async function loadWalletManagement() {
+
+    if (!adminVerified) return;
+
+    await Promise.all([
+        loadCoinRequests(),
+        loadAdminWalletHistory()
+    ]);
+}
+
+// =====================================
+// LOAD COIN REQUESTS
+// =====================================
+
+async function loadCoinRequests() {
+
+    if (!adminVerified) return;
+
+    coinRequestsList.textContent = "Loading requests...";
+
+    try {
+
+        const snapshot = await getDocs(
+            collection(db, "coinRequests")
+        );
+
+        if (snapshot.empty) {
+
+            coinRequestsList.innerHTML =
+                "<p>No coin requests found.</p>";
+
+            return;
+        }
+
+        const requests = snapshot.docs.map(item => ({
+            id: item.id,
+            ...item.data()
+        }));
+
+        requests.sort((a, b) => {
+            const aTime = a.createdAt?.toMillis?.() || 0;
+            const bTime = b.createdAt?.toMillis?.() || 0;
+            return bTime - aTime;
+        });
+
+        coinRequestsList.innerHTML = "";
+
+        requests.forEach(request => {
+
+            const card = document.createElement("div");
+
+            card.className = "wallet-request-item";
+
+            const status = request.status || "pending";
+
+            card.innerHTML = `
+                <h4>${walletEscape(request.uid)}</h4>
+
+                <p>
+                    Coins:
+                    <strong>${walletEscape(request.amount)}</strong>
+                </p>
+
+                <p>
+                    Status:
+                    ${walletEscape(status.toUpperCase())}
+                </p>
+
+                <p>
+                    Request ID:
+                    ${walletEscape(request.id)}
+                </p>
+
+                ${
+                    status === "pending"
+                    ? `
+                        <div class="wallet-request-actions">
+
+                            <button
+                                class="approve-coin-request"
+                                data-id="${walletEscape(request.id)}"
+                            >
+                                APPROVE
+                            </button>
+
+                            <button
+                                class="reject-coin-request"
+                                data-id="${walletEscape(request.id)}"
+                            >
+                                REJECT
+                            </button>
+
+                        </div>
+                    `
+                    : ""
+                }
+            `;
+
+            coinRequestsList.appendChild(card);
+        });
+
+    } catch (error) {
+
+        console.error("Coin requests error:", error);
+
+        coinRequestsList.textContent =
+            "Unable to load requests: " + error.message;
+    }
+}
+
+// =====================================
+// APPROVE / REJECT COIN REQUESTS
+// =====================================
+
+coinRequestsList.addEventListener("click", async (e) => {
+
+    if (!adminVerified) return;
+
+    const approveButton =
+        e.target.closest(".approve-coin-request");
+
+    const rejectButton =
+        e.target.closest(".reject-coin-request");
+
+    const button = approveButton || rejectButton;
+
+    if (!button) return;
+
+    const requestId = button.dataset.id;
+    const approve = Boolean(approveButton);
+
+    if (!confirm(
+        approve
+        ? "Approve this virtual coin request?"
+        : "Reject this virtual coin request?"
+    )) {
+        return;
+    }
+
+    button.disabled = true;
+
+    try {
+
+        const requestRef = doc(db, "coinRequests", requestId);
+
+        await runTransaction(db, async (transaction) => {
+
+            const requestSnap =
+                await transaction.get(requestRef);
+
+            if (!requestSnap.exists()) {
+                throw new Error("Request not found.");
+            }
+
+            const request = requestSnap.data();
+
+            if (request.status !== "pending") {
+                throw new Error(
+                    "This request has already been processed."
+                );
+            }
+
+            if (
+                !Number.isInteger(request.amount) ||
+                request.amount < 1 ||
+                request.amount > 100000 ||
+                !request.uid
+            ) {
+                throw new Error("Invalid request details.");
+            }
+
+            if (!approve) {
+
+                transaction.update(requestRef, {
+                    status: "rejected",
+                    processedAt: serverTimestamp(),
+                    processedBy: auth.currentUser.email
+                });
+
+                return;
+            }
+
+            const walletRef = doc(db, "wallets", request.uid);
+
+            const walletSnap =
+                await transaction.get(walletRef);
+
+            const currentBalance = walletSnap.exists()
+                ? Number(walletSnap.data().balance || 0)
+                : 0;
+
+            if (
+                !Number.isSafeInteger(currentBalance) ||
+                currentBalance < 0 ||
+                currentBalance + request.amount > 1000000000
+            ) {
+                throw new Error("Invalid wallet balance.");
+            }
+
+            transaction.set(walletRef, {
+                uid: request.uid,
+                balance: currentBalance + request.amount,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            const historyRef = doc(
+                collection(db, "walletTransactions")
+            );
+
+            transaction.set(historyRef, {
+                uid: request.uid,
+                amount: request.amount,
+                type: "deposit_approved",
+                description: "Virtual coin request approved",
+                requestId: requestId,
+                createdAt: serverTimestamp()
+            });
+
+            transaction.update(requestRef, {
+                status: "approved",
+                processedAt: serverTimestamp(),
+                processedBy: auth.currentUser.email
+            });
+
+        });
+
+        alert(
+            approve
+            ? "Virtual coins added successfully!"
+            : "Request rejected successfully."
+        );
+
+        await loadWalletManagement();
+
+    } catch (error) {
+
+        console.error("Request processing error:", error);
+
+        alert(error.message || "Request processing failed.");
+
+        button.disabled = false;
+    }
+});
+
+// =====================================
+// ADMIN BONUS COINS
+// =====================================
+
+bonusForm.addEventListener("submit", async (e) => {
+
+    e.preventDefault();
+
+    if (!adminVerified) return;
+
+    const uid =
+        document.getElementById("bonusUid").value.trim();
+
+    const amount =
+        Number(document.getElementById("bonusAmount").value);
+
+    const note =
+        document.getElementById("bonusNote").value.trim();
+
+    if (
+        !uid ||
+        !Number.isSafeInteger(amount) ||
+        amount < 1 ||
+        amount > 100000
+    ) {
+        bonusMessage.textContent =
+            "Enter a valid UID and coin amount.";
+
+        return;
+    }
+
+    bonusMessage.textContent = "Adding bonus coins...";
+
+    try {
+
+        const userSnap = await getDoc(doc(db, "users", uid));
+
+        if (!userSnap.exists()) {
+            throw new Error(
+                "Player profile not found. Check the UID."
+            );
+        }
+
+        await runTransaction(db, async (transaction) => {
+
+            const walletRef = doc(db, "wallets", uid);
+
+            const walletSnap =
+                await transaction.get(walletRef);
+
+            const currentBalance = walletSnap.exists()
+                ? Number(walletSnap.data().balance || 0)
+                : 0;
+
+            if (
+                !Number.isSafeInteger(currentBalance) ||
+                currentBalance < 0 ||
+                currentBalance + amount > 1000000000
+            ) {
+                throw new Error("Invalid wallet balance.");
+            }
+
+            transaction.set(walletRef, {
+                uid: uid,
+                balance: currentBalance + amount,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            const historyRef = doc(
+                collection(db, "walletTransactions")
+            );
+
+            transaction.set(historyRef, {
+                uid: uid,
+                amount: amount,
+                type: "admin_bonus",
+                description: note || "Admin bonus coins",
+                createdAt: serverTimestamp()
+            });
+
+        });
+
+        bonusForm.reset();
+
+        bonusMessage.textContent =
+            "Bonus coins added successfully!";
+
+        await loadAdminWalletHistory();
+
+    } catch (error) {
+
+        console.error("Bonus error:", error);
+
+        bonusMessage.textContent =
+            error.message || "Unable to add bonus.";
+    }
+});
+
+// =====================================
+// ADMIN WALLET HISTORY
+// =====================================
+
+async function loadAdminWalletHistory() {
+
+    if (!adminVerified) return;
+
+    adminWalletHistory.textContent = "Loading history...";
+
+    try {
+
+        const snapshot = await getDocs(
+            collection(db, "walletTransactions")
+        );
+
+        if (snapshot.empty) {
+
+            adminWalletHistory.innerHTML =
+                "<p>No wallet transactions yet.</p>";
+
+            return;
+        }
+
+        const records = snapshot.docs.map(item => ({
+            id: item.id,
+            ...item.data()
+        }));
+
+        records.sort((a, b) => {
+
+            const aTime = a.createdAt?.toMillis?.() || 0;
+            const bTime = b.createdAt?.toMillis?.() || 0;
+
+            return bTime - aTime;
+        });
+
+        adminWalletHistory.innerHTML = "";
+
+        records.slice(0, 30).forEach(record => {
+
+            const item = document.createElement("div");
+
+            item.className = "wallet-history-item";
+
+            item.innerHTML = `
+                <strong>${walletEscape(record.type)}</strong>
+
+                <p>
+                    Player:
+                    ${walletEscape(record.uid)}
+                </p>
+
+                <p>
+                    Coins:
+                    +${walletEscape(record.amount)}
+                </p>
+
+                <small>
+                    ${walletEscape(record.description || "")}
+                </small>
+            `;
+
+            adminWalletHistory.appendChild(item);
+        });
+
+    } catch (error) {
+
+        console.error("Wallet history error:", error);
+
+        adminWalletHistory.textContent =
+            "Unable to load history: " + error.message;
+    }
+}
+
+// =====================================
+// REFRESH WALLET REQUESTS
+// =====================================
+
+refreshRequests.addEventListener("click", async () => {
+
+    if (!adminVerified) return;
+
+    refreshRequests.disabled = true;
+
+    await loadWalletManagement();
+
+    refreshRequests.disabled = false;
 });
