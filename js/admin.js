@@ -280,11 +280,13 @@ tournamentList.addEventListener("click", async (e) => {
 
     if (viewButton) {
 
-        const tournamentId = viewButton.dataset.id;
-        const tournamentName = viewButton.dataset.name;
+    alert("VIEW PLAYERS CLICK WORKING!");
 
-        await loadJoinedPlayers(tournamentId, tournamentName);
-        return;
+    const tournamentId = viewButton.dataset.id;
+    const tournamentName = viewButton.dataset.name;
+
+    await loadJoinedPlayers(tournamentId, tournamentName);
+    return;
     }
 
     // DELETE TOURNAMENT
