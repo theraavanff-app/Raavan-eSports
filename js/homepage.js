@@ -1,3 +1,4 @@
+
 import { auth, db } from "./firebase.js";
 
 import {
@@ -5,6 +6,7 @@ import {
     getDoc,
     setDoc,
     updateDoc,
+    addDoc,
     collection,
     getDocs,
     query,
@@ -36,8 +38,22 @@ let banners = [];
 let bannerTimer = null;
 let unsubscribeTournaments = null;
 
+// WALLET STATE
+let walletBalance = 0;
+let walletRequests = [];
+let walletTransactions = [];
 
+let walletListenersStarted = false;
+
+let unsubscribeWallet = null;
+let unsubscribeRequests = null;
+let unsubscribeHistory = null;
+
+
+// =================================
 // HTML SAFETY
+// =================================
+
 function escapeHTML(value) {
     return String(value ?? "").replace(/[&<>"']/g, char => ({
         "&": "&amp;",
@@ -49,7 +65,10 @@ function escapeHTML(value) {
 }
 
 
+// =================================
 // TOURNAMENT STATUS
+// =================================
+
 function getTournamentStatus(item) {
     const players = Number(item.players || 0);
     const capacity = Number(item.capacity || 0);
@@ -62,7 +81,10 @@ function getTournamentStatus(item) {
 }
 
 
+// =================================
 // LOAD TOURNAMENTS
+// =================================
+
 async function loadTournaments() {
     const snapshot = await getDocs(
         collection(db, "tournaments")
@@ -77,7 +99,10 @@ async function loadTournaments() {
 }
 
 
+// =================================
 // REAL-TIME TOURNAMENT UPDATES
+// =================================
+
 function listenToTournaments(renderTournaments) {
     if (unsubscribeTournaments) {
         unsubscribeTournaments();
@@ -106,7 +131,10 @@ function listenToTournaments(renderTournaments) {
 }
 
 
+// =================================
 // LOAD JOINED TOURNAMENTS
+// =================================
+
 async function loadJoinedTournaments() {
     joinedTournaments.clear();
 
@@ -128,7 +156,10 @@ async function loadJoinedTournaments() {
 }
 
 
+// =================================
 // LOAD CARD SETTINGS
+// =================================
+
 async function loadCardSettings() {
     const snapshot = await getDoc(
         doc(db, "appSettings", "cardFields")
@@ -143,7 +174,10 @@ async function loadCardSettings() {
 }
 
 
+// =================================
 // LOAD BANNERS
+// =================================
+
 async function loadBanners() {
     const snapshot = await getDocs(
         collection(db, "banners")
@@ -158,7 +192,10 @@ async function loadBanners() {
 }
 
 
+// =================================
 // MAIN HOMEPAGE
+// =================================
+
 export function initHomepage() {
     const tournamentList =
         document.getElementById("tournamentList");
@@ -176,13 +213,22 @@ export function initHomepage() {
 
     const homeSections = [...homePage.children];
 
+
+    // =================================
+    // TOURNAMENT MODAL
+    // =================================
+
     const modal = document.createElement("div");
     modal.id = "tournamentModal";
     modal.className = "tournament-modal hidden";
+
     document.body.appendChild(modal);
 
 
+    // =================================
     // SUCCESS TOAST
+    // =================================
+
     const successToast = document.createElement("div");
 
     successToast.className = "join-success-toast";
@@ -200,7 +246,9 @@ export function initHomepage() {
 
     function showJoinSuccess() {
         successToast.classList.remove("show");
+
         void successToast.offsetWidth;
+
         successToast.classList.add("show");
 
         setTimeout(() => {
@@ -209,16 +257,37 @@ export function initHomepage() {
     }
 
 
+    // =================================
     // MY MATCHES PAGE
+    // =================================
+
     const matchesPage = document.createElement("section");
+
     matchesPage.className = "matches-page hidden";
+
     homePage.appendChild(matchesPage);
 
 
+    // =================================
     // PROFILE PAGE
+    // =================================
+
     const profilePage = document.createElement("section");
+
     profilePage.className = "profile-page hidden";
+
     homePage.appendChild(profilePage);
+
+
+    // =================================
+    // WALLET PAGE
+    // =================================
+
+    const walletPage = document.createElement("section");
+
+    walletPage.className = "wallet-page hidden";
+
+    homePage.appendChild(walletPage);
 
 
     // =================================
@@ -278,7 +347,7 @@ export function initHomepage() {
 
 
     // =================================
-    // COMPACT TOURNAMENT CARDS
+    // TOURNAMENT CARDS
     // =================================
 
     function renderTournaments(category = "All") {
@@ -310,14 +379,16 @@ export function initHomepage() {
             const remainingSlots =
                 Math.max(0, capacity - players);
 
-            // Only 3 metrics on the compact card
             const info = [];
 
             if (cardSettings.prizePool) {
                 info.push(`
                     <div class="info-box">
                         <small>PRIZE POOL</small>
-                        <strong>${escapeHTML(item.prizePool ?? 0)} <small class="coin-unit">COINS</small></strong>
+                        <strong>
+                            ${escapeHTML(item.prizePool ?? 0)}
+                            <small class="coin-unit">COINS</small>
+                        </strong>
                     </div>
                 `);
             }
@@ -326,7 +397,10 @@ export function initHomepage() {
                 info.push(`
                     <div class="info-box">
                         <small>PER KILL</small>
-                        <strong>${escapeHTML(item.perKillReward ?? 0)} <small class="coin-unit">COINS</small></strong>
+                        <strong>
+                            ${escapeHTML(item.perKillReward ?? 0)}
+                            <small class="coin-unit">COINS</small>
+                        </strong>
                     </div>
                 `);
             }
@@ -335,7 +409,10 @@ export function initHomepage() {
                 info.push(`
                     <div class="info-box">
                         <small>ENTRY FEES</small>
-                        <strong>${escapeHTML(item.entryFees ?? 0)} <small class="coin-unit">COINS</small></strong>
+                        <strong>
+                            ${escapeHTML(item.entryFees ?? 0)}
+                            <small class="coin-unit">COINS</small>
+                        </strong>
                     </div>
                 `);
             }
@@ -387,8 +464,13 @@ export function initHomepage() {
 
                     <div class="card-slot-section">
                         <div class="card-slot-label">
-                            <span>${full ? "Tournament Full" : "Available Slots"}</span>
-                            <strong>${full ? "FULL" : remainingSlots}</strong>
+                            <span>
+                                ${full ? "Tournament Full" : "Available Slots"}
+                            </span>
+
+                            <strong>
+                                ${full ? "FULL" : remainingSlots}
+                            </strong>
                         </div>
                     </div>
 
@@ -478,9 +560,12 @@ export function initHomepage() {
                     <div class="my-match-list">
                         ${matches.map(item => `
                             <article class="my-match-card">
+
                                 <div class="my-match-top">
                                     <span>${escapeHTML(item.category)}</span>
-                                    <span class="my-match-status">● JOINED</span>
+                                    <span class="my-match-status">
+                                        ● JOINED
+                                    </span>
                                 </div>
 
                                 <h3>${escapeHTML(item.tournamentName)}</h3>
@@ -503,6 +588,7 @@ export function initHomepage() {
                                 >
                                     VIEW TOURNAMENT
                                 </button>
+
                             </article>
                         `).join("")}
                     </div>
@@ -511,12 +597,14 @@ export function initHomepage() {
                         <div class="empty-match-icon">🏆</div>
                         <h3>No Matches Joined Yet</h3>
                         <p>Your joined tournaments will appear here.</p>
+
                         <button id="exploreMatches">
                             EXPLORE TOURNAMENTS
                         </button>
                     </div>
                 `}
             `;
+
         } catch (error) {
             console.error("My Matches error:", error);
 
@@ -552,6 +640,7 @@ export function initHomepage() {
                 <span>RAAVAN ESPORTS</span>
                 <h2>PLAYER PROFILE</h2>
             </div>
+
             <div class="profile-card">
                 <h3>Loading Profile...</h3>
             </div>
@@ -565,7 +654,9 @@ export function initHomepage() {
             if (!profileSnap.exists()) {
                 const playerName =
                     user.displayName ||
-                    (user.email ? user.email.split("@")[0] : "Player");
+                    (user.email
+                        ? user.email.split("@")[0]
+                        : "Player");
 
                 const playerId =
                     "RAAVAN-" +
@@ -609,12 +700,16 @@ export function initHomepage() {
                     <div class="profile-details">
                         <div>
                             <small>PLAYER ID</small>
-                            <strong>${escapeHTML(data.playerId || "Not assigned")}</strong>
+                            <strong>
+                                ${escapeHTML(data.playerId || "Not assigned")}
+                            </strong>
                         </div>
 
                         <div>
                             <small>EMAIL ADDRESS</small>
-                            <strong>${escapeHTML(data.email || user.email || "")}</strong>
+                            <strong>
+                                ${escapeHTML(data.email || user.email || "")}
+                            </strong>
                         </div>
                     </div>
 
@@ -643,6 +738,7 @@ export function initHomepage() {
                     </button>
                 </div>
             `;
+
         } catch (error) {
             console.error("Profile error:", error);
 
@@ -650,6 +746,7 @@ export function initHomepage() {
                 <div class="profile-card">
                     <h3>Profile could not load</h3>
                     <p>${escapeHTML(error.message)}</p>
+
                     <button id="retryProfile">
                         TRY AGAIN
                     </button>
@@ -657,6 +754,426 @@ export function initHomepage() {
             `;
         }
     }
+
+
+    // =================================
+    // WALLET DATE FORMAT
+    // =================================
+
+    function formatWalletDate(timestamp) {
+        if (!timestamp || !timestamp.toDate) {
+            return "Just now";
+        }
+
+        return timestamp.toDate().toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    }
+
+
+    // =================================
+    // RENDER PLAYER WALLET
+    // =================================
+
+    function renderWallet() {
+        const user = auth.currentUser;
+
+        if (!user) {
+            walletPage.innerHTML = `
+                <div class="wallet-empty">
+                    <h3>Please Login First</h3>
+                </div>
+            `;
+            return;
+        }
+
+        const history = [...walletTransactions].sort((a, b) => {
+            const timeA = a.createdAt?.toMillis?.() || 0;
+            const timeB = b.createdAt?.toMillis?.() || 0;
+
+            return timeB - timeA;
+        });
+
+        const requests = [...walletRequests].sort((a, b) => {
+            const timeA = a.createdAt?.toMillis?.() || 0;
+            const timeB = b.createdAt?.toMillis?.() || 0;
+
+            return timeB - timeA;
+        });
+
+        walletPage.innerHTML = `
+            <div class="wallet-heading">
+                <span>RAAVAN ESPORTS</span>
+                <h2>MY WALLET</h2>
+                <p>Manage your virtual coins.</p>
+            </div>
+
+            <div class="wallet-balance-card">
+
+                <div class="wallet-card-top">
+                    <span>AVAILABLE BALANCE</span>
+                    <span class="wallet-coin-icon">◈</span>
+                </div>
+
+                <h1>
+                    ${walletBalance.toLocaleString("en-IN")}
+                </h1>
+
+                <p>VIRTUAL COINS</p>
+
+                <div class="wallet-card-footer">
+                    <span>RAAVAN ESPORTS</span>
+                    <span>PLAYER WALLET</span>
+                </div>
+
+            </div>
+
+            <div class="wallet-action-grid">
+
+                <button class="wallet-action-btn" id="addCoinsBtn">
+                    <span>＋</span>
+                    <strong>ADD COINS</strong>
+                    <small>Send a request</small>
+                </button>
+
+                <button class="wallet-action-btn" id="walletHistoryBtn">
+                    <span>▤</span>
+                    <strong>HISTORY</strong>
+                    <small>View transactions</small>
+                </button>
+
+            </div>
+
+            <div class="wallet-request-box" id="walletRequestBox">
+
+                <div class="wallet-section-title">
+                    <h3>ADD VIRTUAL COINS</h3>
+                    <span>REQUEST</span>
+                </div>
+
+                <p class="wallet-note">
+                    Submit a virtual coin request. An admin will review and approve or reject it.
+                </p>
+
+                <form id="coinRequestForm">
+
+                    <label for="coinAmount">
+                        Coin Amount
+                    </label>
+
+                    <input
+                        type="number"
+                        id="coinAmount"
+                        min="1"
+                        max="100000"
+                        step="1"
+                        placeholder="Enter coins (e.g. 500)"
+                        required
+                    >
+
+                    <label for="coinNote">
+                        Request Note (Optional)
+                    </label>
+
+                    <input
+                        type="text"
+                        id="coinNote"
+                        maxlength="100"
+                        placeholder="Write a short note"
+                    >
+
+                    <button type="submit" id="submitCoinRequest">
+                        SUBMIT REQUEST
+                    </button>
+
+                    <p id="coinRequestMessage"></p>
+
+                </form>
+
+            </div>
+
+            <div class="wallet-section-title wallet-history-heading">
+                <h3>REQUEST HISTORY</h3>
+                <span>${requests.length} REQUESTS</span>
+            </div>
+
+            <div class="wallet-request-list">
+
+                ${requests.length ? requests.map(item => `
+                    <div class="wallet-request-item">
+
+                        <div>
+                            <strong>
+                                +${Number(item.amount || 0)} Coins
+                            </strong>
+
+                            <small>
+                                ${escapeHTML(item.note || "Virtual coin request")}
+                            </small>
+
+                            <small>
+                                ${formatWalletDate(item.createdAt)}
+                            </small>
+                        </div>
+
+                        <span class="request-status ${escapeHTML(item.status || "pending")}">
+                            ${escapeHTML((item.status || "pending").toUpperCase())}
+                        </span>
+
+                    </div>
+                `).join("") : `
+                    <div class="wallet-empty-small">
+                        No coin requests yet.
+                    </div>
+                `}
+
+            </div>
+
+            <div class="wallet-section-title wallet-history-heading" id="walletHistory">
+                <h3>TRANSACTION HISTORY</h3>
+                <span>${history.length} RECORDS</span>
+            </div>
+
+            <div class="wallet-transaction-list">
+
+                ${history.length ? history.map(item => {
+                    const type = item.type || "transaction";
+
+                    const title = type === "admin_bonus"
+                        ? "Admin Bonus"
+                        : type === "deposit_approved"
+                            ? "Request Approved"
+                            : "Wallet Transaction";
+
+                    return `
+                        <div class="wallet-transaction-item">
+
+                            <div class="wallet-transaction-icon">
+                                ◈
+                            </div>
+
+                            <div class="wallet-transaction-info">
+                                <strong>${title}</strong>
+
+                                <small>
+                                    ${escapeHTML(item.description || "Virtual coins")}
+                                </small>
+
+                                <small>
+                                    ${formatWalletDate(item.createdAt)}
+                                </small>
+                            </div>
+
+                            <strong class="wallet-credit">
+                                +${Number(item.amount || 0)}
+                            </strong>
+
+                        </div>
+                    `;
+                }).join("") : `
+                    <div class="wallet-empty-small">
+                        No transactions yet.
+                    </div>
+                `}
+
+            </div>
+
+            <p class="wallet-footer-note">
+                This wallet uses virtual coins only. It does not process real-money deposits or withdrawals.
+            </p>
+        `;
+    }
+
+
+    // =================================
+    // START REAL-TIME WALLET LISTENERS
+    // =================================
+
+    function startWalletListeners() {
+        const user = auth.currentUser;
+
+        if (!user || walletListenersStarted) return;
+
+        walletListenersStarted = true;
+
+        // WALLET BALANCE
+        unsubscribeWallet = onSnapshot(
+            doc(db, "wallets", user.uid),
+
+            snapshot => {
+                walletBalance = snapshot.exists()
+                    ? Number(snapshot.data().balance || 0)
+                    : 0;
+
+                renderWallet();
+            },
+
+            error => {
+                console.error("Wallet balance error:", error);
+            }
+        );
+
+
+        // COIN REQUESTS
+        const requestQuery = query(
+            collection(db, "coinRequests"),
+            where("uid", "==", user.uid)
+        );
+
+        unsubscribeRequests = onSnapshot(
+            requestQuery,
+
+            snapshot => {
+                walletRequests = snapshot.docs.map(item => ({
+                    id: item.id,
+                    ...item.data()
+                }));
+
+                renderWallet();
+            },
+
+            error => {
+                console.error("Wallet request error:", error);
+            }
+        );
+
+
+        // TRANSACTION HISTORY
+        const historyQuery = query(
+            collection(db, "walletTransactions"),
+            where("uid", "==", user.uid)
+        );
+
+        unsubscribeHistory = onSnapshot(
+            historyQuery,
+
+            snapshot => {
+                walletTransactions = snapshot.docs.map(item => ({
+                    id: item.id,
+                    ...item.data()
+                }));
+
+                renderWallet();
+            },
+
+            error => {
+                console.error("Wallet history error:", error);
+            }
+        );
+    }
+
+
+    // =================================
+    // SUBMIT COIN REQUEST
+    // =================================
+
+    walletPage.addEventListener("submit", async event => {
+        if (event.target.id !== "coinRequestForm") return;
+
+        event.preventDefault();
+
+        const user = auth.currentUser;
+
+        if (!user) {
+            alert("Please login first.");
+            return;
+        }
+
+        const amount = Number(
+            document.getElementById("coinAmount").value
+        );
+
+        const note =
+            document.getElementById("coinNote").value.trim();
+
+        const message =
+            document.getElementById("coinRequestMessage");
+
+        const submitButton =
+            document.getElementById("submitCoinRequest");
+
+        if (
+            !Number.isInteger(amount) ||
+            amount < 1 ||
+            amount > 100000
+        ) {
+            message.textContent =
+                "Enter a valid amount between 1 and 100000.";
+
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = "SUBMITTING...";
+
+        try {
+            const requestData = {
+                uid: user.uid,
+                amount: amount,
+                status: "pending",
+                createdAt: serverTimestamp()
+            };
+
+            if (note) {
+                requestData.note = note;
+            }
+
+            await addDoc(
+                collection(db, "coinRequests"),
+                requestData
+            );
+
+            event.target.reset();
+
+            message.textContent =
+                "Request submitted successfully! Waiting for admin approval.";
+
+            message.className = "wallet-message-success";
+
+        } catch (error) {
+            console.error("Coin request error:", error);
+
+            message.textContent =
+                error.message || "Could not submit request.";
+
+            message.className = "wallet-message-error";
+
+        } finally {
+            // The real-time listener may have refreshed the form.
+            const currentButton =
+                document.getElementById("submitCoinRequest");
+
+            if (currentButton) {
+                currentButton.disabled = false;
+                currentButton.textContent = "SUBMIT REQUEST";
+            }
+        }
+    });
+
+
+    // =================================
+    // WALLET BUTTON EVENTS
+    // =================================
+
+    walletPage.addEventListener("click", event => {
+        if (event.target.closest("#addCoinsBtn")) {
+            document.getElementById("walletRequestBox")
+                ?.scrollIntoView({
+                    behavior: "smooth"
+                });
+        }
+
+        if (event.target.closest("#walletHistoryBtn")) {
+            document.getElementById("walletHistory")
+                ?.scrollIntoView({
+                    behavior: "smooth"
+                });
+        }
+    });
 
 
     // =================================
@@ -681,6 +1198,11 @@ export function initHomepage() {
             page !== "profile"
         );
 
+        walletPage.classList.toggle(
+            "hidden",
+            page !== "wallet"
+        );
+
         document.querySelectorAll(".nav-btn").forEach(button => {
             button.classList.toggle(
                 "active",
@@ -688,8 +1210,18 @@ export function initHomepage() {
             );
         });
 
-        if (page === "matches") renderMyMatches();
-        if (page === "profile") renderProfile();
+        if (page === "matches") {
+            renderMyMatches();
+        }
+
+        if (page === "profile") {
+            renderProfile();
+        }
+
+        if (page === "wallet") {
+            startWalletListeners();
+            renderWallet();
+        }
     }
 
 
@@ -718,17 +1250,19 @@ export function initHomepage() {
         const remainingSlots =
             Math.max(0, capacity - players);
 
-        const progress =
-            capacity > 0
-                ? Math.min(100, (players / capacity) * 100)
-                : 0;
+        const progress = capacity > 0
+            ? Math.min(100, (players / capacity) * 100)
+            : 0;
 
         modal.innerHTML = `
             <div class="details-box">
 
                 <div class="details-header">
                     <span>TOURNAMENT DETAILS</span>
-                    <button class="close-modal" id="closeModal">✕</button>
+
+                    <button class="close-modal" id="closeModal">
+                        ✕
+                    </button>
                 </div>
 
                 <div class="details-logo">R</div>
@@ -750,24 +1284,33 @@ export function initHomepage() {
                 </p>
 
                 <div class="details-grid">
+
                     <div class="details-item">
                         <small>PRIZE POOL</small>
-                        <strong>${escapeHTML(item.prizePool ?? 0)} COINS</strong>
+                        <strong>
+                            ${escapeHTML(item.prizePool ?? 0)} COINS
+                        </strong>
                     </div>
 
                     <div class="details-item">
                         <small>PER KILL REWARD</small>
-                        <strong>${escapeHTML(item.perKillReward ?? 0)} COINS</strong>
+                        <strong>
+                            ${escapeHTML(item.perKillReward ?? 0)} COINS
+                        </strong>
                     </div>
 
                     <div class="details-item">
                         <small>BOOYAH PRIZE</small>
-                        <strong>${escapeHTML(item.booyahPrize ?? 0)} COINS</strong>
+                        <strong>
+                            ${escapeHTML(item.booyahPrize ?? 0)} COINS
+                        </strong>
                     </div>
 
                     <div class="details-item">
                         <small>ENTRY FEES</small>
-                        <strong>${escapeHTML(item.entryFees ?? 0)} COINS</strong>
+                        <strong>
+                            ${escapeHTML(item.entryFees ?? 0)} COINS
+                        </strong>
                     </div>
 
                     <div class="details-item">
@@ -784,12 +1327,19 @@ export function initHomepage() {
                         <small>PLAYERS</small>
                         <strong>${players}/${capacity}</strong>
                     </div>
+
                 </div>
 
                 <div class="slot-section">
+
                     <div class="slot-label">
-                        <span>${full ? "Tournament Full" : "Available Slots"}</span>
-                        <strong>${full ? "FULL" : remainingSlots}</strong>
+                        <span>
+                            ${full ? "Tournament Full" : "Available Slots"}
+                        </span>
+
+                        <strong>
+                            ${full ? "FULL" : remainingSlots}
+                        </strong>
                     </div>
 
                     <div class="slot-track">
@@ -798,6 +1348,7 @@ export function initHomepage() {
                             style="width:${progress}%"
                         ></div>
                     </div>
+
                 </div>
 
                 <button
@@ -812,6 +1363,7 @@ export function initHomepage() {
                             : "CONFIRM JOIN"
                     }
                 </button>
+
             </div>
         `;
 
@@ -924,6 +1476,7 @@ export function initHomepage() {
                     );
 
                     item.players = updatedPlayers;
+
                     joinedTournaments.add(String(id));
 
                     renderTournaments(
@@ -932,10 +1485,12 @@ export function initHomepage() {
                     );
 
                     closeDetails();
+
                     showJoinSuccess();
 
                 } catch (error) {
                     console.error("Joining error:", error);
+
                     alert(error.message || "Joining failed.");
 
                     const currentJoinButton =
@@ -965,6 +1520,7 @@ export function initHomepage() {
     function closeDetails() {
         modal.classList.add("hidden");
     }
+
 
     modal.addEventListener("click", event => {
         if (event.target === modal) {
@@ -1029,7 +1585,9 @@ export function initHomepage() {
 
     profilePage.addEventListener("click", async event => {
         if (event.target.closest("#logoutBtn")) {
-            if (!confirm("Are you sure you want to logout?")) return;
+            if (!confirm("Are you sure you want to logout?")) {
+                return;
+            }
 
             try {
                 await signOut(auth);
@@ -1093,14 +1651,12 @@ export function initHomepage() {
 
 
     // =================================
-    // WALLET
+    // HEADER WALLET BUTTON
     // =================================
 
     document.getElementById("walletBtn")
         ?.addEventListener("click", () => {
-            alert(
-                "Demo Points Wallet will be added in the next update."
-            );
+            showPage("wallet");
         });
 
 
@@ -1122,10 +1678,10 @@ export function initHomepage() {
         button.addEventListener("click", () => {
             const page = button.dataset.page;
 
-            if (["home", "matches", "profile"].includes(page)) {
+            if (
+                ["home", "matches", "wallet", "profile"].includes(page)
+            ) {
                 showPage(page);
-            } else {
-                alert("This page is coming soon.");
             }
         });
     });
@@ -1151,6 +1707,7 @@ export function initHomepage() {
             ]);
 
             renderTournaments();
+
             renderBanners();
 
             listenToTournaments(renderTournaments);
@@ -1161,7 +1718,8 @@ export function initHomepage() {
             tournamentList.innerHTML = `
                 <div class="empty-state">
                     Could not load tournaments.
-                    <br>${escapeHTML(error.message)}
+                    <br>
+                    ${escapeHTML(error.message)}
                 </div>
             `;
         }
