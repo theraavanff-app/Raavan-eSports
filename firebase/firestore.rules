@@ -1,1 +1,285 @@
 
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "the.raavanff@gmail.com";
+    }
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validPackage(amount, coins) {
+      return (
+        (amount == 10 && coins == 10) ||
+        (amount == 20 && coins == 20) ||
+        (amount == 50 && coins == 50) ||
+        (amount == 100 && coins == 100) ||
+        (amount == 200 && coins == 200) ||
+        (amount == 500 && coins == 500)
+      );
+    }
+
+    function paymentRequestPath(id) {
+      return /databases/$(database)/documents/coinRequests/$(id);
+    }
+
+    function utrClaimPath(utr) {
+      return /databases/$(database)/documents/utrClaims/$(utr);
+    }
+
+    // USER PROFILES
+    match /users/{userId} {
+      allow get: if isAdmin() ||
+        (signedIn() && request.auth.uid == userId);
+
+      allow list: if signedIn() && request.auth.uid == userId;
+
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasAll([
+          'uid', 'name', 'email', 'playerId', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'name', 'email', 'playerId', 'createdAt'
+        ])
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['name'])
+        && request.resource.data.name is string;
+
+      allow delete: if false;
+    }
+
+    // TOURNAMENTS
+    match /tournaments/{tournamentId} {
+      allow read: if signedIn();
+      allow create, delete: if isAdmin();
+
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.players is int
+        && resource.data.capacity is int
+        && resource.data.isActive != false
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['players'])
+        && request.resource.data.players is int
+        && request.resource.data.players == resource.data.players + 1
+        && request.resource.data.players <= resource.data.capacity
+        && !exists(
+          /databases/$(database)/documents/tournamentJoins/$(tournamentId + "_" + request.auth.uid)
+        )
+        && getAfter(
+          /databases/$(database)/documents/tournamentJoins/$(tournamentId + "_" + request.auth.uid)
+        ).data.uid == request.auth.uid
+        && getAfter(
+          /databases/$(database)/documents/tournamentJoins/$(tournamentId + "_" + request.auth.uid)
+        ).data.tournamentId == tournamentId
+      );
+    }
+
+    // TOURNAMENT JOINS
+    match /tournamentJoins/{joinId} {
+      allow get: if isAdmin() ||
+        (signedIn() &&
+          (!exists(/databases/$(database)/documents/tournamentJoins/$(joinId))
+          || resource.data.uid == request.auth.uid));
+
+      allow list: if isAdmin() ||
+        (signedIn() && resource.data.uid == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && joinId == request.resource.data.tournamentId + "_" + request.auth.uid
+        && request.resource.data.keys().hasAll([
+          'uid', 'tournamentId', 'tournamentName',
+          'category', 'map', 'time', 'capacity', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'tournamentId', 'tournamentName',
+          'category', 'map', 'time', 'capacity', 'createdAt'
+        ])
+        && request.resource.data.tournamentId is string
+        && request.resource.data.tournamentName is string
+        && request.resource.data.category is string
+        && request.resource.data.map is string
+        && request.resource.data.time is string
+        && request.resource.data.capacity is int
+        && request.resource.data.capacity > 0
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId))
+        && get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.isActive != false
+        && get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.players is int
+        && get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.capacity is int
+        && request.resource.data.capacity ==
+          get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.capacity
+        && getAfter(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.players ==
+          get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.players + 1
+        && getAfter(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.players <= request.resource.data.capacity;
+
+      allow update, delete: if false;
+    }
+
+    // BANNERS
+    match /banners/{bannerId} {
+      allow read: if signedIn();
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll(['imageUrl', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['imageUrl', 'createdAt'])
+        && request.resource.data.imageUrl is string
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['imageUrl', 'createdAt'])
+        && request.resource.data.imageUrl is string;
+
+      allow delete: if isAdmin();
+    }
+
+    // APP SETTINGS
+    match /appSettings/{settingId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // WALLETS
+    match /wallets/{userId} {
+      allow get: if isAdmin() ||
+        (signedIn() && request.auth.uid == userId);
+
+      allow list: if isAdmin();
+
+      allow create, update: if isAdmin()
+        && request.resource.data.uid == userId
+        && request.resource.data.balance is int
+        && request.resource.data.balance >= 0
+        && request.resource.data.balance <= 1000000000;
+
+      allow delete: if false;
+    }
+
+    // UPI PAYMENT REQUESTS
+    match /coinRequests/{requestId} {
+      allow get, list: if isAdmin() ||
+        (signedIn() && resource.data.uid == request.auth.uid);
+
+      // Player creates a pending request and UTR claim together.
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          'uid', 'amount', 'coins', 'utr', 'status', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'amount', 'coins', 'utr', 'status', 'createdAt'
+        ])
+        && request.resource.data.amount is int
+        && request.resource.data.coins is int
+        && validPackage(
+          request.resource.data.amount,
+          request.resource.data.coins
+        )
+        && request.resource.data.utr is string
+        && request.resource.data.utr.matches('^[A-Z0-9]{8,20}$')
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && existsAfter(utrClaimPath(request.resource.data.utr))
+        && getAfter(utrClaimPath(request.resource.data.utr)).data.uid == request.auth.uid
+        && getAfter(utrClaimPath(request.resource.data.utr)).data.requestId == requestId;
+
+      // Only admin can process a pending payment once.
+      allow update: if isAdmin()
+        && resource.data.status == 'pending'
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly([
+            'status', 'processedAt', 'processedBy'
+          ])
+        && request.resource.data.processedAt == request.time
+        && request.resource.data.processedBy == request.auth.token.email
+        && existsAfter(utrClaimPath(resource.data.utr))
+        && getAfter(utrClaimPath(resource.data.utr)).data.status ==
+          request.resource.data.status;
+
+      allow delete: if false;
+    }
+
+    // UNIQUE UTR CLAIMS
+    // Document ID must be the normalized UTR.
+    match /utrClaims/{utr} {
+      allow get, list: if isAdmin() ||
+        (signedIn() && resource.data.uid == request.auth.uid);
+
+      allow create: if signedIn()
+        && utr.matches('^[A-Z0-9]{8,20}$')
+        && request.resource.data.keys().hasAll([
+          'uid', 'requestId', 'status', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'requestId', 'status', 'createdAt'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.requestId is string
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && existsAfter(paymentRequestPath(request.resource.data.requestId))
+        && getAfter(paymentRequestPath(request.resource.data.requestId)).data.uid == request.auth.uid
+        && getAfter(paymentRequestPath(request.resource.data.requestId)).data.utr == utr;
+
+      allow update: if isAdmin()
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['approved', 'rejected']
+        && getAfter(paymentRequestPath(resource.data.requestId)).data.status ==
+          request.resource.data.status;
+
+      allow delete: if false;
+    }
+
+    // WALLET TRANSACTION HISTORY
+    match /walletTransactions/{transactionId} {
+      allow get, list: if isAdmin() ||
+        (signedIn() && resource.data.uid == request.auth.uid);
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll([
+          'uid', 'amount', 'type', 'description', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'amount', 'type', 'description',
+          'requestId', 'createdAt'
+        ])
+        && request.resource.data.uid is string
+        && request.resource.data.amount is int
+        && request.resource.data.amount > 0
+        && request.resource.data.type in [
+          'admin_bonus', 'deposit_approved'
+        ]
+        && request.resource.data.description is string
+        && request.resource.data.createdAt == request.time
+        && (
+          request.resource.data.type == 'admin_bonus'
+          || (
+            request.resource.data.requestId is string
+            && transactionId == 'deposit_' + request.resource.data.requestId
+            && getAfter(paymentRequestPath(request.resource.data.requestId)).data.status == 'approved'
+            && getAfter(paymentRequestPath(request.resource.data.requestId)).data.uid == request.resource.data.uid
+            && getAfter(paymentRequestPath(request.resource.data.requestId)).data.coins == request.resource.data.amount
+          )
+        );
+
+      allow update, delete: if false;
+    }
+  }
+}
+
