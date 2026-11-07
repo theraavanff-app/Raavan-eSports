@@ -280,8 +280,6 @@ tournamentList.addEventListener("click", async (e) => {
 
     if (viewButton) {
 
-    alert("VIEW PLAYERS CLICK WORKING!");
-
     const tournamentId = viewButton.dataset.id;
     const tournamentName = viewButton.dataset.name;
 
