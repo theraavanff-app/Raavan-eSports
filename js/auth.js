@@ -234,8 +234,6 @@ export function initAuthPage() {
                     createdAt: serverTimestamp()
                 });
 
-                window.location.href = "./home.html";
-
             } catch (error) {
                 console.error("Registration error:", error);
                 errorBox.textContent = error.message;
