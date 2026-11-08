@@ -720,6 +720,11 @@ function renderWallet() {
                 <strong>HISTORY</strong>
                 <small>Track your activity</small>
             </button>
+            <button class="wallet-action-btn" id="withdrawCoinsBtn">
+    <span>↗</span>
+    <strong>WITHDRAW</strong>
+    <small>Get your payout</small>
+</button>
         </div>
 
         <section class="wallet-request-box" id="walletRequestBox">
@@ -858,6 +863,100 @@ function renderWallet() {
                         Never submit a fake or incorrect UTR.
                     </p>
                 </div>
+
+            </form>
+        </section>
+                <section class="wallet-request-box" id="withdrawalBox">
+
+            <div class="wallet-section-title">
+                <div>
+                    <span class="wallet-mini-label">GET YOUR REWARD</span>
+                    <h3>WITHDRAW COINS</h3>
+                </div>
+                <span class="wallet-secure-tag">✦ MANUAL PAYOUT</span>
+            </div>
+
+            <p class="wallet-note">
+                1 Coin = ₹1. Minimum withdrawal is 10 coins.
+            </p>
+
+            <form id="withdrawalForm">
+
+                <label class="wallet-form-label">
+                    ENTER COINS TO WITHDRAW
+                </label>
+
+                <input
+                    type="number"
+                    id="withdrawalCoins"
+                    min="10"
+                    max="1000000"
+                    step="1"
+                    placeholder="Minimum 10 coins"
+                    required
+                >
+                                <label class="wallet-form-label" for="withdrawalMethod">
+                    SELECT PAYOUT METHOD
+                </label>
+
+                <select id="withdrawalMethod" required>
+                    <option value="upi">UPI ID</option>
+                    <option value="bank">Bank Account</option>
+                </select>
+
+                <div id="withdrawalUpiBox">
+                    <label class="wallet-form-label" for="withdrawalUpiId">
+                        YOUR UPI ID
+                    </label>
+                    <input
+                        type="text"
+                        id="withdrawalUpiId"
+                        placeholder="example@upi"
+                    >
+                </div>
+
+                <div id="withdrawalBankBox" style="display:none">
+
+                    <label class="wallet-form-label">
+                        ACCOUNT HOLDER NAME
+                    </label>
+                    <input type="text"
+                        id="withdrawalAccountHolder"
+                        placeholder="Account holder name">
+
+                    <label class="wallet-form-label">
+                        ACCOUNT NUMBER
+                    </label>
+                    <input type="text"
+                        id="withdrawalAccountNumber"
+                        placeholder="Bank account number">
+
+                    <label class="wallet-form-label">
+                        IFSC CODE
+                    </label>
+                    <input type="text"
+                        id="withdrawalIfsc"
+                        placeholder="ABCD0123456">
+
+                    <label class="wallet-form-label">
+                        BANK NAME
+                    </label>
+                    <input type="text"
+                        id="withdrawalBankName"
+                        placeholder="Bank name">
+
+                </div>
+                                <p id="withdrawalMessage"></p>
+
+                <button type="submit" id="submitWithdrawal"
+                    class="wallet-submit-btn">
+                    SUBMIT WITHDRAWAL REQUEST ➜
+                </button>
+
+                <p class="wallet-note">
+                    Coins will be reserved when you submit.
+                    Admin will manually process your payout.
+                </p>
 
             </form>
         </section>
