@@ -294,6 +294,7 @@ async function loadTournaments() {
                     </button>
 
                     <button
+    type="button"
     class="edit-room"
     data-id="${escapeHTML(item.id)}"
     data-name="${escapeHTML(data.name)}">
