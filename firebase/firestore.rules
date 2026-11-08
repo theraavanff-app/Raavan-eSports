@@ -49,32 +49,33 @@ service cloud.firestore {
     }
 
     function validPaidJoin(id, uid) {
-      return exists(tournamentPath(id))
-        && get(tournamentPath(id)).data.entryFees is int
-        && get(tournamentPath(id)).data.entryFees > 0
-        && exists(walletPath(uid))
-        && get(walletPath(uid)).data.balance is int
-        && getAfter(walletPath(uid)).data.balance is int
-        && getAfter(walletPath(uid)).data.balance ==
-          get(walletPath(uid)).data.balance -
-          get(tournamentPath(id)).data.entryFees
-        && getAfter(walletPath(uid)).data.lastEntryTournamentId == id
+      let tournament = get(tournamentPath(id)).data;
+      let tournamentAfter = getAfter(tournamentPath(id)).data;
+      let wallet = get(walletPath(uid)).data;
+      let walletAfter = getAfter(walletPath(uid)).data;
+      let joinAfter = getAfter(tournamentJoinPath(id, uid)).data;
+      let historyAfter = getAfter(entryHistoryPath(id, uid)).data;
+
+      return tournament.entryFees is int
+        && tournament.entryFees > 0
+        && wallet.balance is int
+        && walletAfter.balance is int
+        && walletAfter.balance == wallet.balance - tournament.entryFees
+        && walletAfter.balance >= 0
+        && walletAfter.lastEntryTournamentId == id
         && !exists(tournamentJoinPath(id, uid))
         && existsAfter(tournamentJoinPath(id, uid))
-        && getAfter(tournamentJoinPath(id, uid)).data.uid == uid
-        && getAfter(tournamentJoinPath(id, uid)).data.tournamentId == id
-        && get(tournamentPath(id)).data.players is int
-        && get(tournamentPath(id)).data.capacity is int
-        && getAfter(tournamentPath(id)).data.players ==
-          get(tournamentPath(id)).data.players + 1
-        && getAfter(tournamentPath(id)).data.players <=
-          get(tournamentPath(id)).data.capacity
+        && joinAfter.uid == uid
+        && joinAfter.tournamentId == id
+        && tournament.players is int
+        && tournament.capacity is int
+        && tournamentAfter.players == tournament.players + 1
+        && tournamentAfter.players <= tournament.capacity
         && existsAfter(entryHistoryPath(id, uid))
-        && getAfter(entryHistoryPath(id, uid)).data.uid == uid
-        && getAfter(entryHistoryPath(id, uid)).data.amount ==
-          get(tournamentPath(id)).data.entryFees
-        && getAfter(entryHistoryPath(id, uid)).data.type == 'tournament_entry'
-        && getAfter(entryHistoryPath(id, uid)).data.tournamentId == id;
+        && historyAfter.uid == uid
+        && historyAfter.amount == tournament.entryFees
+        && historyAfter.type == 'tournament_entry'
+        && historyAfter.tournamentId == id;
     }
 
     // USER PROFILES
@@ -312,7 +313,16 @@ service cloud.firestore {
 
     // WALLET TRANSACTION HISTORY
     match /walletTransactions/{transactionId} {
-      allow get, list: if isAdmin() ||
+      allow get: if isAdmin() ||
+        (
+          signedIn() &&
+          (
+            !exists(/databases/$(database)/documents/walletTransactions/$(transactionId))
+            || resource.data.uid == request.auth.uid
+          )
+        );
+
+      allow list: if isAdmin() ||
         (signedIn() && resource.data.uid == request.auth.uid);
 
       allow create: if (
