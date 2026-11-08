@@ -32,40 +32,51 @@ service cloud.firestore {
       return /databases/$(database)/documents/utrClaims/$(utr);
     }
 
-function tournamentPath(id) {
-  return /databases/$(database)/documents/tournaments/$(id);
-}
+    function tournamentPath(id) {
+      return /databases/$(database)/documents/tournaments/$(id);
+    }
 
-function tournamentJoinPath(id, uid) {
-  return /databases/$(database)/documents/tournamentJoins/$(id + "_" + uid);
-}
+    function tournamentJoinPath(id, uid) {
+      return /databases/$(database)/documents/tournamentJoins/$(id + "_" + uid);
+    }
 
-function walletPath(uid) {
-  return /databases/$(database)/documents/wallets/$(uid);
-}
+    function walletPath(uid) {
+      return /databases/$(database)/documents/wallets/$(uid);
+    }
 
-function entryHistoryPath(id, uid) {
-  return /databases/$(database)/documents/walletTransactions/("tournament_entry_" + id + "_" + uid);
-}
-function validPaidJoin(id, uid) {
-  return exists(tournamentPath(id))
-    && get(tournamentPath(id)).data.entryFees is int
-    && get(tournamentPath(id)).data.entryFees > 0
-    && exists(walletPath(uid))
-    && getAfter(walletPath(uid)).data.balance ==
-      get(walletPath(uid)).data.balance -
-      get(tournamentPath(id)).data.entryFees
-    && existsAfter(tournamentJoinPath(id, uid))
-    && getAfter(tournamentJoinPath(id, uid)).data.uid == uid
-    && getAfter(tournamentJoinPath(id, uid)).data.tournamentId == id
-    && getAfter(tournamentPath(id)).data.players ==
-      get(tournamentPath(id)).data.players + 1
-    && existsAfter(entryHistoryPath(id, uid))
-    && getAfter(entryHistoryPath(id, uid)).data.uid == uid
-    && getAfter(entryHistoryPath(id, uid)).data.amount ==
-      get(tournamentPath(id)).data.entryFees
-    && getAfter(entryHistoryPath(id, uid)).data.type == 'tournament_entry';
-}
+    function entryHistoryPath(id, uid) {
+      return /databases/$(database)/documents/walletTransactions/("tournament_entry_" + id + "_" + uid);
+    }
+
+    function validPaidJoin(id, uid) {
+      return exists(tournamentPath(id))
+        && get(tournamentPath(id)).data.entryFees is int
+        && get(tournamentPath(id)).data.entryFees > 0
+        && exists(walletPath(uid))
+        && get(walletPath(uid)).data.balance is int
+        && getAfter(walletPath(uid)).data.balance is int
+        && getAfter(walletPath(uid)).data.balance ==
+          get(walletPath(uid)).data.balance -
+          get(tournamentPath(id)).data.entryFees
+        && getAfter(walletPath(uid)).data.lastEntryTournamentId == id
+        && !exists(tournamentJoinPath(id, uid))
+        && existsAfter(tournamentJoinPath(id, uid))
+        && getAfter(tournamentJoinPath(id, uid)).data.uid == uid
+        && getAfter(tournamentJoinPath(id, uid)).data.tournamentId == id
+        && get(tournamentPath(id)).data.players is int
+        && get(tournamentPath(id)).data.capacity is int
+        && getAfter(tournamentPath(id)).data.players ==
+          get(tournamentPath(id)).data.players + 1
+        && getAfter(tournamentPath(id)).data.players <=
+          get(tournamentPath(id)).data.capacity
+        && existsAfter(entryHistoryPath(id, uid))
+        && getAfter(entryHistoryPath(id, uid)).data.uid == uid
+        && getAfter(entryHistoryPath(id, uid)).data.amount ==
+          get(tournamentPath(id)).data.entryFees
+        && getAfter(entryHistoryPath(id, uid)).data.type == 'tournament_entry'
+        && getAfter(entryHistoryPath(id, uid)).data.tournamentId == id;
+    }
+
     // USER PROFILES
     match /users/{userId} {
       allow get: if isAdmin() ||
@@ -109,15 +120,9 @@ function validPaidJoin(id, uid) {
         && request.resource.data.players is int
         && request.resource.data.players == resource.data.players + 1
         && request.resource.data.players <= resource.data.capacity
-        && !exists(
-          /databases/$(database)/documents/tournamentJoins/$(tournamentId + "_" + request.auth.uid)
-        )
-        && getAfter(
-          /databases/$(database)/documents/tournamentJoins/$(tournamentId + "_" + request.auth.uid)
-        ).data.uid == request.auth.uid
-        && getAfter(
-          /databases/$(database)/documents/tournamentJoins/$(tournamentId + "_" + request.auth.uid)
-        ).data.tournamentId == tournamentId
+        && !exists(tournamentJoinPath(tournamentId, request.auth.uid))
+        && getAfter(tournamentJoinPath(tournamentId, request.auth.uid)).data.uid == request.auth.uid
+        && getAfter(tournamentJoinPath(tournamentId, request.auth.uid)).data.tournamentId == tournamentId
       );
     }
 
@@ -150,15 +155,21 @@ function validPaidJoin(id, uid) {
         && request.resource.data.capacity is int
         && request.resource.data.capacity > 0
         && request.resource.data.createdAt == request.time
-        && exists(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId))
-        && get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.isActive != false
-        && get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.players is int
-        && get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.capacity is int
+        && exists(tournamentPath(request.resource.data.tournamentId))
+        && get(tournamentPath(request.resource.data.tournamentId)).data.entryFees is int
+        && (
+          get(tournamentPath(request.resource.data.tournamentId)).data.entryFees == 0
+          || validPaidJoin(request.resource.data.tournamentId, request.auth.uid)
+        )
+        && get(tournamentPath(request.resource.data.tournamentId)).data.isActive != false
+        && get(tournamentPath(request.resource.data.tournamentId)).data.players is int
+        && get(tournamentPath(request.resource.data.tournamentId)).data.capacity is int
         && request.resource.data.capacity ==
-          get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.capacity
-        && getAfter(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.players ==
-          get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.players + 1
-        && getAfter(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId)).data.players <= request.resource.data.capacity;
+          get(tournamentPath(request.resource.data.tournamentId)).data.capacity
+        && getAfter(tournamentPath(request.resource.data.tournamentId)).data.players ==
+          get(tournamentPath(request.resource.data.tournamentId)).data.players + 1
+        && getAfter(tournamentPath(request.resource.data.tournamentId)).data.players <=
+          request.resource.data.capacity;
 
       allow update, delete: if false;
     }
@@ -193,11 +204,33 @@ function validPaidJoin(id, uid) {
 
       allow list: if isAdmin();
 
-      allow create, update: if isAdmin()
+      allow create: if isAdmin()
         && request.resource.data.uid == userId
         && request.resource.data.balance is int
         && request.resource.data.balance >= 0
         && request.resource.data.balance <= 1000000000;
+
+      allow update: if isAdmin() || (
+        signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly([
+            'balance', 'updatedAt', 'lastEntryTournamentId'
+          ])
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasAll([
+            'balance', 'updatedAt', 'lastEntryTournamentId'
+          ])
+        && resource.data.balance is int
+        && request.resource.data.balance is int
+        && request.resource.data.balance >= 0
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.lastEntryTournamentId is string
+        && validPaidJoin(
+          request.resource.data.lastEntryTournamentId,
+          userId
+        )
+      );
 
       allow delete: if false;
     }
@@ -207,7 +240,6 @@ function validPaidJoin(id, uid) {
       allow get, list: if isAdmin() ||
         (signedIn() && resource.data.uid == request.auth.uid);
 
-      // Player creates a pending request and UTR claim together.
       allow create: if signedIn()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasAll([
@@ -230,7 +262,6 @@ function validPaidJoin(id, uid) {
         && getAfter(utrClaimPath(request.resource.data.utr)).data.uid == request.auth.uid
         && getAfter(utrClaimPath(request.resource.data.utr)).data.requestId == requestId;
 
-      // Only admin can process a pending payment once.
       allow update: if isAdmin()
         && resource.data.status == 'pending'
         && request.resource.data.status in ['approved', 'rejected']
@@ -248,7 +279,6 @@ function validPaidJoin(id, uid) {
     }
 
     // UNIQUE UTR CLAIMS
-    // Document ID must be the normalized UTR.
     match /utrClaims/{utr} {
       allow get, list: if isAdmin() ||
         (signedIn() && resource.data.uid == request.auth.uid);
@@ -285,7 +315,8 @@ function validPaidJoin(id, uid) {
       allow get, list: if isAdmin() ||
         (signedIn() && resource.data.uid == request.auth.uid);
 
-      allow create: if isAdmin()
+      allow create: if (
+        isAdmin()
         && request.resource.data.keys().hasAll([
           'uid', 'amount', 'type', 'description', 'createdAt'
         ])
@@ -310,14 +341,37 @@ function validPaidJoin(id, uid) {
             && getAfter(paymentRequestPath(request.resource.data.requestId)).data.uid == request.resource.data.uid
             && getAfter(paymentRequestPath(request.resource.data.requestId)).data.coins == request.resource.data.amount
           )
-        );
+        )
+      ) || (
+        signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          'uid', 'amount', 'type', 'description',
+          'tournamentId', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'amount', 'type', 'description',
+          'tournamentId', 'createdAt'
+        ])
+        && request.resource.data.amount is int
+        && request.resource.data.amount > 0
+        && request.resource.data.type == 'tournament_entry'
+        && request.resource.data.description is string
+        && request.resource.data.tournamentId is string
+        && transactionId ==
+          'tournament_entry_' + request.resource.data.tournamentId + '_' + request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && validPaidJoin(
+          request.resource.data.tournamentId,
+          request.auth.uid
+        )
+      );
 
       allow update, delete: if false;
     }
+
     // TOURNAMENT ROOM DETAILS
     match /tournamentRooms/{tournamentId} {
-
-      // Admin and joined players can read room details.
       allow get: if isAdmin() ||
         (
           signedIn() &&
@@ -326,12 +380,9 @@ function validPaidJoin(id, uid) {
           )
         );
 
-      // Only admin can list room documents.
       allow list: if isAdmin();
 
-      // Only admin can publish, update or unpublish room details.
       allow create, update, delete: if isAdmin();
     }
   }
 }
-
