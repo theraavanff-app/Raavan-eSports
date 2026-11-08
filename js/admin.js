@@ -815,6 +815,147 @@ async function loadCoinRequests() {
 }
 
 // =====================================
+// LOAD WITHDRAWAL REQUESTS
+// =====================================
+
+async function loadWithdrawalRequests() {
+
+    if (!adminVerified) return;
+
+    withdrawalRequestsList.textContent =
+        "Loading withdrawal requests...";
+
+    try {
+
+        const snapshot = await getDocs(
+            collection(db, "withdrawalRequests")
+        );
+
+        if (snapshot.empty) {
+            withdrawalRequestsList.innerHTML =
+                "<p>No withdrawal requests found.</p>";
+            return;
+        }
+
+        const requests = snapshot.docs.map(item => ({
+            id: item.id,
+            ...item.data()
+        }));
+
+        requests.sort((a, b) => {
+            const aTime = a.createdAt?.toMillis?.() || 0;
+            const bTime = b.createdAt?.toMillis?.() || 0;
+            return bTime - aTime;
+        });
+
+        withdrawalRequestsList.innerHTML = "";
+
+        requests.forEach(request => {
+
+            const card = document.createElement("div");
+            card.className = "wallet-request-item";
+
+            const status = request.status || "pending";
+            const coins = Number(request.coins || 0);
+            const method = request.method || "";
+
+            let payoutDetails = "";
+
+            if (method === "upi") {
+
+                payoutDetails = `
+                    <p>UPI ID:
+                        <strong>${walletEscape(request.upiId)}</strong>
+                    </p>
+                `;
+
+            } else if (method === "bank") {
+
+                payoutDetails = `
+                    <p>Account Holder:
+                        <strong>${walletEscape(request.accountHolder)}</strong>
+                    </p>
+
+                    <p>Account Number:
+                        <strong>${walletEscape(request.accountNumber)}</strong>
+                    </p>
+
+                    <p>IFSC:
+                        <strong>${walletEscape(request.ifsc)}</strong>
+                    </p>
+
+                    <p>Bank:
+                        <strong>${walletEscape(request.bankName)}</strong>
+                    </p>
+                `;
+
+            }
+
+            const date = request.createdAt?.toDate?.()
+                ?.toLocaleString("en-IN") || "Not available";
+
+            card.innerHTML = `
+                <h4>Player UID: ${walletEscape(request.uid)}</h4>
+
+                <p>Withdrawal:
+                    <strong>${walletEscape(coins)} Coins (₹${walletEscape(request.amountRupees)})</strong>
+                </p>
+
+                <p>Method:
+                    <strong>${walletEscape(method.toUpperCase())}</strong>
+                </p>
+
+                ${payoutDetails}
+
+                <p>Date:
+                    ${walletEscape(date)}
+                </p>
+
+                <p>Status:
+                    <strong>${walletEscape(status.toUpperCase())}</strong>
+                </p>
+
+                <p>Request ID:
+                    <small>${walletEscape(request.id)}</small>
+                </p>
+
+                ${
+                    status === "pending"
+                    ? `
+                        <div class="wallet-request-actions">
+
+                            <button
+                                class="pay-withdrawal-request"
+                                data-id="${walletEscape(request.id)}">
+                                MARK PAID
+                            </button>
+
+                            <button
+                                class="reject-withdrawal-request"
+                                data-id="${walletEscape(request.id)}">
+                                REJECT
+                            </button>
+
+                        </div>
+                    `
+                    : ""
+                }
+            `;
+
+            withdrawalRequestsList.appendChild(card);
+
+        });
+
+    } catch (error) {
+
+        console.error("Withdrawal requests error:", error);
+
+        withdrawalRequestsList.textContent =
+            "Unable to load withdrawals: " + error.message;
+    }
+}
+
+// =====================================
 // APPROVE / REJECT UPI REQUEST
 // =====================================
 
