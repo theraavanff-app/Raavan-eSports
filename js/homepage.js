@@ -1929,66 +1929,118 @@ function renderWallet() {
                     );
 
                     const updatedPlayers = await runTransaction(
-                        db,
-                        async transaction => {
-                            const tournamentSnap =
-                                await transaction.get(tournamentRef);
+    db,
+    async transaction => {
+        const tournamentSnap =
+            await transaction.get(tournamentRef);
 
-                            const existingJoin =
-                                await transaction.get(joinRef);
+        const existingJoin =
+            await transaction.get(joinRef);
 
-                            if (!tournamentSnap.exists()) {
-                                throw new Error("Tournament not found.");
-                            }
+        if (!tournamentSnap.exists()) {
+            throw new Error("Tournament not found.");
+        }
 
-                            if (existingJoin.exists()) {
-                                throw new Error("You have already joined.");
-                            }
+        if (existingJoin.exists()) {
+            throw new Error("You have already joined.");
+        }
 
-                            const data = tournamentSnap.data();
+        const data = tournamentSnap.data();
 
-                            if (data.isActive === false) {
-                                throw new Error("Tournament is inactive.");
-                            }
+        if (data.isActive === false) {
+            throw new Error("Tournament is inactive.");
+        }
 
-                            const currentPlayers =
-                                Number(data.players || 0);
+        const currentPlayers = Number(data.players || 0);
+        const maxPlayers = Number(data.capacity || 0);
+        const entryFee = Number(data.entryFees ?? 0);
 
-                            const maxPlayers =
-                                Number(data.capacity || 0);
+        if (
+            !Number.isInteger(currentPlayers) ||
+            !Number.isInteger(maxPlayers) ||
+            maxPlayers <= 0
+        ) {
+            throw new Error("Invalid player count.");
+        }
 
-                            if (
-                                !Number.isInteger(currentPlayers) ||
-                                !Number.isInteger(maxPlayers) ||
-                                maxPlayers <= 0
-                            ) {
-                                throw new Error("Invalid player count.");
-                            }
+        if (!Number.isSafeInteger(entryFee) || entryFee < 0) {
+            throw new Error("Invalid tournament entry fee.");
+        }
 
-                            if (currentPlayers >= maxPlayers) {
-                                throw new Error("Tournament is full.");
-                            }
+        if (currentPlayers >= maxPlayers) {
+            throw new Error("Tournament is full.");
+        }
 
-                            const newPlayers = currentPlayers + 1;
+        const walletRef = doc(db, "wallets", user.uid);
+        const historyRef = doc(
+            db,
+            "walletTransactions",
+            `tournament_entry_${id}_${user.uid}`
+        );
 
-                            transaction.set(joinRef, {
-                                uid: user.uid,
-                                tournamentId: String(id),
-                                tournamentName: data.name || item.name,
-                                category: data.category || item.category,
-                                map: data.map || item.map,
-                                time: data.time || item.time,
-                                capacity: maxPlayers,
-                                createdAt: serverTimestamp()
-                            });
+        let newBalance = null;
 
-                            transaction.update(tournamentRef, {
-                                players: newPlayers
-                            });
+        if (entryFee > 0) {
+            const walletSnap = await transaction.get(walletRef);
+            const historySnap = await transaction.get(historyRef);
 
-                            return newPlayers;
-                        }
-                    );
+            if (!walletSnap.exists()) {
+                throw new Error("Wallet not found. Please contact admin.");
+            }
+
+            if (historySnap.exists()) {
+                throw new Error("Entry fee already charged.");
+            }
+
+            const balance = Number(walletSnap.data().balance);
+
+            if (!Number.isSafeInteger(balance) || balance < 0) {
+                throw new Error("Invalid wallet balance.");
+            }
+
+            if (balance < entryFee) {
+                throw new Error(
+                    `Insufficient coins! Required: ${entryFee}, Available: ${balance}.`
+                );
+            }
+
+            newBalance = balance - entryFee;
+
+            transaction.update(walletRef, {
+                balance: newBalance,
+                updatedAt: serverTimestamp()
+            });
+
+            transaction.set(historyRef, {
+                uid: user.uid,
+                amount: entryFee,
+                type: "tournament_entry",
+                description: `Entry fee for ${data.name || item.name}`,
+                tournamentId: String(id),
+                createdAt: serverTimestamp()
+            });
+        }
+
+        const newPlayers = currentPlayers + 1;
+
+        transaction.set(joinRef, {
+            uid: user.uid,
+            tournamentId: String(id),
+            tournamentName: data.name || item.name,
+            category: data.category || item.category,
+            map: data.map || item.map,
+            time: data.time || item.time,
+            capacity: maxPlayers,
+            createdAt: serverTimestamp()
+        });
+
+        transaction.update(tournamentRef, {
+            players: newPlayers
+        });
+
+        return newPlayers;
+    }
+);
 
                     item.players = updatedPlayers;
                     joinedTournaments.add(String(id));
