@@ -271,7 +271,7 @@ service cloud.firestore {
             'status', 'processedAt', 'processedBy'
           ])
         && request.resource.data.processedAt == request.time
-        && request.resource.data.processedBy == request.auth.token.email
+        && request.resource.data.processedBy == request.auth.uid
         && existsAfter(utrClaimPath(resource.data.utr))
         && getAfter(utrClaimPath(resource.data.utr)).data.status ==
           request.resource.data.status;
