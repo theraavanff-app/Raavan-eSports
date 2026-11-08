@@ -209,6 +209,59 @@ export function initHomepage() {
     modal.id = "tournamentModal";
     modal.className = "tournament-modal hidden";
     document.body.appendChild(modal);
+    // =================================
+// ROOM DETAILS MODAL
+// =================================
+
+const roomDetailsModal = document.createElement("div");
+
+roomDetailsModal.id = "roomDetailsModal";
+roomDetailsModal.className = "room-details-modal hidden";
+
+roomDetailsModal.innerHTML = `
+    <div class="room-details-content">
+
+        <button type="button" class="room-details-close"
+            id="closeRoomDetails">&times;</button>
+
+        <div class="room-details-icon">🔐</div>
+
+        <span class="room-details-tag">RAAVAN ESPORTS</span>
+
+        <h2>ROOM DETAILS</h2>
+
+        <p id="roomDetailsStatus">
+            Loading room details...
+        </p>
+
+        <div id="roomCredentials" hidden>
+
+            <div class="room-credential-box">
+                <small>ROOM ID</small>
+                <strong id="displayRoomId"></strong>
+                <button type="button" id="copyRoomId">
+                    COPY ID
+                </button>
+            </div>
+
+            <div class="room-credential-box">
+                <small>ROOM PASSWORD</small>
+                <strong id="displayRoomPassword"></strong>
+                <button type="button" id="copyRoomPassword">
+                    COPY PASSWORD
+                </button>
+            </div>
+
+        </div>
+
+        <p class="room-details-footer">
+            ⚡ BE READY. THE BATTLE IS WAITING.
+        </p>
+
+    </div>
+`;
+
+document.body.appendChild(roomDetailsModal);
 
     // =================================
     // SUCCESS TOAST
