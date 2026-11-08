@@ -55,6 +55,11 @@ function validPaidJoin(id, uid) {
     && getAfter(walletPath(uid)).data.balance ==
       get(walletPath(uid)).data.balance -
       get(tournamentPath(id)).data.entryFees
+    && existsAfter(tournamentJoinPath(id, uid))
+    && getAfter(tournamentJoinPath(id, uid)).data.uid == uid
+    && getAfter(tournamentJoinPath(id, uid)).data.tournamentId == id
+    && getAfter(tournamentPath(id)).data.players ==
+      get(tournamentPath(id)).data.players + 1
     && existsAfter(entryHistoryPath(id, uid))
     && getAfter(entryHistoryPath(id, uid)).data.uid == uid
     && getAfter(entryHistoryPath(id, uid)).data.amount ==
