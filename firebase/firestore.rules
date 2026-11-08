@@ -280,6 +280,24 @@ service cloud.firestore {
 
       allow update, delete: if false;
     }
+    // TOURNAMENT ROOM DETAILS
+    match /tournamentRooms/{tournamentId} {
+
+      // Admin and joined players can read room details.
+      allow get: if isAdmin() ||
+        (
+          signedIn() &&
+          exists(
+            /databases/$(database)/documents/tournamentJoins/$(tournamentId + "_" + request.auth.uid)
+          )
+        );
+
+      // Only admin can list room documents.
+      allow list: if isAdmin();
+
+      // Only admin can publish, update or unpublish room details.
+      allow create, update, delete: if isAdmin();
+    }
   }
 }
 
