@@ -80,6 +80,30 @@ function formatWalletDate(timestamp) {
         minute: "2-digit"
     });
 }
+function formatMatchDateTime(item) {
+    const value = item.matchDateTime;
+
+    let date = null;
+
+    if (value?.toDate) {
+        date = value.toDate();
+    } else if (value) {
+        date = new Date(value);
+    }
+
+    if (date && !Number.isNaN(date.getTime())) {
+        return date.toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true
+        });
+    }
+
+    return item.time || "Time not set";
+}
 
 function getTournamentStatus(item) {
     const players = Number(item.players || 0);
