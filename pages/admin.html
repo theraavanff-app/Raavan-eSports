@@ -275,6 +275,49 @@
             <div id="bannerList">Loading banners...</div>
         </section>
     </main>
+    <!-- ROOM MANAGEMENT MODAL -->
+<div id="roomManagementModal" class="room-modal" hidden>
+    <div class="room-modal-content">
+
+        <button type="button" id="closeRoomModal" class="room-close">
+            &times;
+        </button>
+
+        <span class="room-modal-tag">⚡ RAAVAN ESPORTS</span>
+        <h2>MANAGE ROOM</h2>
+        <p id="roomTournamentName">Tournament Room Details</p>
+
+        <form id="roomManagementForm">
+
+            <label for="roomIdInput">ROOM ID</label>
+            <input
+                type="text"
+                id="roomIdInput"
+                placeholder="Enter Room ID"
+                required
+            >
+
+            <label for="roomPasswordInput">ROOM PASSWORD</label>
+            <input
+                type="text"
+                id="roomPasswordInput"
+                placeholder="Enter Room Password"
+                required
+            >
+
+            <button type="submit" id="publishRoomBtn">
+                PUBLISH ROOM DETAILS
+            </button>
+
+            <button type="button" id="unpublishRoomBtn">
+                UNPUBLISH ROOM
+            </button>
+
+            <p id="roomManagementMessage"></p>
+
+        </form>
+    </div>
+</div>
 
     <footer class="admin-footer">
         <div class="footer-brand">RAAVAN <span>ESPORTS</span></div>
