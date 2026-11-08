@@ -168,7 +168,9 @@ tournamentForm.addEventListener("submit", async e => {
         const prizePool = document.getElementById("tPrize").value.trim();
         const perKillReward = document.getElementById("tPerKill").value.trim();
         const booyahPrize = document.getElementById("tBooyah").value.trim();
-        const entryFees = document.getElementById("tEntry").value.trim();
+        const entryFees = Number(
+    document.getElementById("tEntry").value.trim()
+);
         const map = document.getElementById("tMap").value.trim();
         const time = document.getElementById("tTime").value.trim();
         const matchDateTime =
@@ -192,6 +194,9 @@ if (Number.isNaN(matchTimestamp.getTime())) {
 
         if (!name || !category || !prizePool || !capacity) {
             throw new Error("Please fill all required fields.");
+        }
+        if (!Number.isInteger(entryFees) || entryFees < 0) {
+    throw new Error("Entry fee must be a valid coin amount.");
         }
 
         if (
