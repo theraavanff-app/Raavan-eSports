@@ -47,6 +47,20 @@ function walletPath(uid) {
 function entryHistoryPath(id, uid) {
   return /databases/$(database)/documents/walletTransactions/("tournament_entry_" + id + "_" + uid);
 }
+function validPaidJoin(id, uid) {
+  return exists(tournamentPath(id))
+    && get(tournamentPath(id)).data.entryFees is int
+    && get(tournamentPath(id)).data.entryFees > 0
+    && exists(walletPath(uid))
+    && getAfter(walletPath(uid)).data.balance ==
+      get(walletPath(uid)).data.balance -
+      get(tournamentPath(id)).data.entryFees
+    && existsAfter(entryHistoryPath(id, uid))
+    && getAfter(entryHistoryPath(id, uid)).data.uid == uid
+    && getAfter(entryHistoryPath(id, uid)).data.amount ==
+      get(tournamentPath(id)).data.entryFees
+    && getAfter(entryHistoryPath(id, uid)).data.type == 'tournament_entry';
+}
     // USER PROFILES
     match /users/{userId} {
       allow get: if isAdmin() ||
