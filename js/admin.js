@@ -1506,9 +1506,9 @@ async function loadAdminWalletHistory() {
                 </p>
 
                 <p>
-                    Coins:
-                    +${walletEscape(record.amount)}
-                </p>
+    Coins:
+    ${record.type === "withdrawal_paid" ? "-" : "+"}${walletEscape(record.amount)}
+</p>
 
                 <small>
                     ${walletEscape(record.description || "")}
