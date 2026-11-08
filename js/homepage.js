@@ -1038,11 +1038,17 @@ function renderWallet() {
             ${history.length ? history.map(item => {
                 const type = item.type || "transaction";
 
-                const title = type === "admin_bonus"
+                                const title = type === "admin_bonus"
                     ? "Admin Bonus"
                     : type === "deposit_approved"
                         ? "UPI Payment Approved"
-                        : "Wallet Transaction";
+                        : type === "withdrawal_paid"
+                            ? "Withdrawal Paid"
+                            : type === "withdrawal_refund"
+                                ? "Withdrawal Refunded"
+                                : "Wallet Transaction";
+
+                const amountPrefix = type === "withdrawal_paid" ? "-" : "+";
 
                 return `
                     <div class="wallet-transaction-item">
@@ -1055,7 +1061,7 @@ function renderWallet() {
                         </div>
 
                         <strong class="wallet-credit">
-                            +${Number(item.amount || 0)}
+                            ${amountPrefix}${Number(item.amount || 0)}
                         </strong>
                     </div>
                 `;
