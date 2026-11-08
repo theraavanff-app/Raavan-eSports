@@ -45,8 +45,8 @@ service cloud.firestore {
     }
 
     function entryHistoryPath(id, uid) {
-      return /databases/$(database)/documents/walletTransactions/("tournament_entry_" + id + "_" + uid);
-    }
+  return /databases/$(database)/documents/walletTransactions/$(("tournament_entry_" + id + "_" + uid));
+}
 
     function validPaidJoin(id, uid) {
       let tournament = get(tournamentPath(id)).data;
