@@ -528,6 +528,14 @@ export function initHomepage() {
                                 >
                                     VIEW TOURNAMENT
                                 </button>
+                                                                <div class="room-card-action">
+                                    <button
+                                        class="room-details-btn"
+                                        data-id="${escapeHTML(item.tournamentId)}"
+                                    >
+                                        🔐 VIEW ROOM DETAILS
+                                    </button>
+                                </div>
                             </article>
                         `).join("")}
                     </div>
