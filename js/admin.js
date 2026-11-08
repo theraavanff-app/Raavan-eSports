@@ -28,6 +28,7 @@ const ADMIN_EMAIL = "the.raavanff@gmail.com";
 const COIN_PACKAGES = [10, 20, 50, 100, 200, 500];
 
 let adminVerified = false;
+let activeRoomTournamentId = null;
 
 // =====================================
 // HTML ELEMENTS
@@ -338,6 +339,54 @@ tournamentList.addEventListener("click", async e => {
 
         return;
     }
+    const roomButton = e.target.closest(".edit-room");
+
+if (roomButton) {
+    const id = roomButton.dataset.id;
+    const name = roomButton.dataset.name;
+
+    activeRoomTournamentId = id;
+
+    const modal = document.getElementById("roomManagementModal");
+    const roomName = document.getElementById("roomTournamentName");
+    const roomIdInput = document.getElementById("roomIdInput");
+    const roomPasswordInput = document.getElementById("roomPasswordInput");
+    const roomMessage = document.getElementById("roomManagementMessage");
+
+    roomName.textContent = name;
+    roomMessage.textContent = "Loading room details...";
+
+    roomIdInput.value = "";
+    roomPasswordInput.value = "";
+
+    modal.hidden = false;
+
+    try {
+        const roomSnap = await getDoc(
+            doc(db, "tournamentRooms", id)
+        );
+
+        if (roomSnap.exists()) {
+            const roomData = roomSnap.data();
+
+            roomIdInput.value = roomData.roomId || "";
+            roomPasswordInput.value = roomData.password || "";
+
+            roomMessage.textContent = roomData.published
+                ? "Room details are currently PUBLISHED."
+                : "Room details are currently UNPUBLISHED.";
+        } else {
+            roomMessage.textContent = "No room details added yet.";
+        }
+
+    } catch (error) {
+        console.error("Room loading error:", error);
+        roomMessage.textContent =
+            "Unable to load room: " + error.message;
+    }
+
+    return;
+}
 
     const deleteButton = e.target.closest(".delete-tournament");
 
