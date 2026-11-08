@@ -955,6 +955,203 @@ async function loadWithdrawalRequests() {
     }
 }
 
+ // =====================================
+ // PROCESS WITHDRAWAL REQUESTS
+ // =====================================
+
+withdrawalRequestsList.addEventListener("click", async e => {
+
+    if (!adminVerified) return;
+
+    const paidButton =
+        e.target.closest(".pay-withdrawal-request");
+
+    const rejectButton =
+        e.target.closest(".reject-withdrawal-request");
+
+    const button = paidButton || rejectButton;
+
+    if (!button || button.disabled) return;
+
+    const requestId = button.dataset.id;
+    const isPaid = Boolean(paidButton);
+
+    if (isPaid) {
+
+        if (!confirm(
+            "Have you actually sent the payment to the player's UPI or bank account?"
+        )) return;
+
+    } else {
+
+        if (!confirm(
+            "Reject this withdrawal? The player's coins will be refunded automatically."
+        )) return;
+
+    }
+
+    let payoutReference = "";
+
+    if (isPaid) {
+
+        payoutReference = prompt(
+            "Enter the actual UPI UTR / bank payment reference:"
+        );
+
+        if (payoutReference === null) return;
+
+        payoutReference = payoutReference.trim();
+
+        if (
+            payoutReference.length < 4 ||
+            payoutReference.length > 80
+        ) {
+            alert("Reference must be 4 to 80 characters.");
+            return;
+        }
+    }
+
+    button.disabled = true;
+
+    try {
+
+        const requestRef = doc(
+            db,
+            "withdrawalRequests",
+            requestId
+        );
+
+        await runTransaction(db, async transaction => {
+
+            const requestSnap =
+                await transaction.get(requestRef);
+
+            if (!requestSnap.exists()) {
+                throw new Error("Withdrawal request not found.");
+            }
+
+            const request = requestSnap.data();
+
+            if (request.status !== "pending") {
+                throw new Error(
+                    "This withdrawal is already processed."
+                );
+            }
+
+            const uid = request.uid;
+            const coins = Number(request.coins);
+
+            if (
+                !uid ||
+                !Number.isSafeInteger(coins) ||
+                coins < 10 ||
+                Number(request.amountRupees) !== coins
+            ) {
+                throw new Error("Invalid withdrawal details.");
+            }
+
+            const historyId = isPaid
+                ? "withdrawal_paid_" + requestId
+                : "withdrawal_refund_" + requestId;
+
+            const historyRef = doc(
+                db,
+                "walletTransactions",
+                historyId
+            );
+
+            const historySnap =
+                await transaction.get(historyRef);
+
+            if (historySnap.exists()) {
+                throw new Error(
+                    "Transaction history already exists."
+                );
+            }
+
+            if (isPaid) {
+
+                transaction.update(requestRef, {
+                    status: "paid",
+                    processedAt: serverTimestamp(),
+                    processedBy: auth.currentUser.uid,
+                    payoutReference: payoutReference
+                });
+
+                transaction.set(historyRef, {
+                    uid: uid,
+                    amount: coins,
+                    type: "withdrawal_paid",
+                    description: "Withdrawal paid • Reference: " + payoutReference,
+                    requestId: requestId,
+                    createdAt: serverTimestamp()
+                });
+
+            } else {
+
+                const walletRef = doc(db, "wallets", uid);
+
+                const walletSnap =
+                    await transaction.get(walletRef);
+
+                if (!walletSnap.exists()) {
+                    throw new Error("Player wallet not found.");
+                }
+
+                const currentBalance =
+                    Number(walletSnap.data().balance);
+
+                if (
+                    !Number.isSafeInteger(currentBalance) ||
+                    currentBalance < 0 ||
+                    currentBalance + coins > 1000000000
+                ) {
+                    throw new Error("Invalid wallet balance.");
+                }
+
+                transaction.update(walletRef, {
+                    balance: currentBalance + coins,
+                    updatedAt: serverTimestamp()
+                });
+
+                transaction.update(requestRef, {
+                    status: "rejected",
+                    processedAt: serverTimestamp(),
+                    processedBy: auth.currentUser.uid
+                });
+
+                transaction.set(historyRef, {
+                    uid: uid,
+                    amount: coins,
+                    type: "withdrawal_refund",
+                    description: "Withdrawal rejected • Coins refunded",
+                    requestId: requestId,
+                    createdAt: serverTimestamp()
+                });
+
+            }
+
+        });
+
+        alert(
+            isPaid
+            ? "Withdrawal marked as PAID successfully."
+            : "Withdrawal rejected. Coins refunded successfully."
+        );
+
+        await loadWalletManagement();
+
+    } catch (error) {
+
+        console.error("Withdrawal processing error:", error);
+
+        alert(error.message || "Withdrawal processing failed.");
+
+        button.disabled = false;
+    }
+
+});
+        
 // =====================================
 // APPROVE / REJECT UPI REQUEST
 // =====================================
