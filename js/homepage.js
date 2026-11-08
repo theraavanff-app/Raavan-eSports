@@ -410,7 +410,7 @@ export function initHomepage() {
                         </div>
                     </div>
 
-                    <div class="join-row">
+                                        <div class="join-row">
                         <button
                             class="join-btn ${full ? "full-join-btn" : ""}"
                             data-id="${escapeHTML(item.id)}"
@@ -422,6 +422,17 @@ export function initHomepage() {
                                     : "VIEW & JOIN"}
                         </button>
                     </div>
+
+                    ${joined ? `
+                        <div class="room-card-action">
+                            <button
+                                class="room-details-btn"
+                                data-id="${escapeHTML(item.id)}"
+                            >
+                                🔐 VIEW ROOM DETAILS
+                            </button>
+                        </div>
+                    ` : ""}
                 </article>
             `;
         }).join("");
