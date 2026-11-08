@@ -1878,7 +1878,7 @@ function renderWallet() {
 
                     <div class="details-item">
                         <small>MATCH TIME</small>
-                        <strong>${escapeHTML(item.time)}</strong>
+<strong>${escapeHTML(formatMatchDateTime(item))}</strong>
                     </div>
 
                     <div class="details-item">
