@@ -609,8 +609,8 @@ document.getElementById("copyRoomPassword")
                         </span>
 
                         <span class="match-status ${full ? "full-status" : ""}">
-                            ● ${full ? "FULL" : "UPCOMING"}
-                        </span>
+    ${full ? "● FULL" : `🕒 ${escapeHTML(formatMatchDateTime(item))}`}
+</span>
                     </div>
 
                     <h4>${escapeHTML(item.name || "Tournament")}</h4>
