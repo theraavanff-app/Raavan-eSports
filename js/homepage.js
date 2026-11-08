@@ -1171,6 +1171,26 @@ function renderWallet() {
                 );
             });
     });
+        // =================================
+    // WITHDRAWAL METHOD SELECTION
+    // =================================
+
+    walletPage.addEventListener("change", event => {
+        if (event.target.id !== "withdrawalMethod") return;
+
+        const method = event.target.value;
+
+        const upiBox = walletPage.querySelector("#withdrawalUpiBox");
+        const bankBox = walletPage.querySelector("#withdrawalBankBox");
+
+        if (method === "upi") {
+            upiBox.style.display = "block";
+            bankBox.style.display = "none";
+        } else {
+            upiBox.style.display = "none";
+            bankBox.style.display = "block";
+        }
+    });
     // =================================
     // COPY UPI ID
     // =================================
