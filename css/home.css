@@ -1745,8 +1745,9 @@
 }
 
 .coin-package-card small {
-    color: #aaa;
+    color: #111111;
     font-size: 9px;
+    font-weight: 700;
 }
 
 .package-popular {
