@@ -698,6 +698,7 @@ async function loadWalletManagement() {
 
     await Promise.all([
         loadCoinRequests(),
+        loadWithdrawalRequests(),
         loadAdminWalletHistory()
     ]);
 }
