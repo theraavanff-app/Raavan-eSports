@@ -293,6 +293,12 @@ async function loadTournaments() {
                     </button>
 
                     <button
+    class="edit-room"
+    data-id="${escapeHTML(item.id)}"
+    data-name="${escapeHTML(data.name)}">
+    ADD / EDIT ROOM
+</button>
+<button
                         class="delete-tournament"
                         data-id="${escapeHTML(item.id)}">
                         DELETE
