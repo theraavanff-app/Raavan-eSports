@@ -1484,3 +1484,620 @@
     padding: 40px 15px;
     text-align: center;
 }
+
+/* =========================================
+   RAAVAN ESPORTS PREMIUM WALLET REDESIGN
+========================================= */
+
+.wallet-page {
+    max-width: 650px;
+    margin: auto;
+    padding: 20px 15px 115px;
+    color: #fff;
+}
+
+.wallet-heading {
+    margin-bottom: 20px;
+}
+
+.wallet-eyebrow,
+.wallet-mini-label {
+    display: block;
+    color: #f4bd4f;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+
+.wallet-heading h2 {
+    font-size: 27px;
+    font-weight: 1000;
+    margin: 8px 0 5px;
+}
+
+.wallet-heading h2 span {
+    color: #f4bd4f;
+}
+
+.wallet-heading p {
+    color: #aaa;
+    font-size: 12px;
+}
+
+/* BALANCE CARD */
+
+.wallet-balance-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding: 23px;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 90% 15%, #ed202b55, transparent 35%),
+        linear-gradient(135deg, #3b1118, #17131b 60%, #101015);
+    border: 1px solid #d9a43c88;
+    box-shadow: 0 12px 35px #0008, 0 0 22px #ed202b18;
+}
+
+.wallet-card-glow {
+    position: absolute;
+    z-index: -1;
+    width: 170px;
+    height: 170px;
+    right: -60px;
+    bottom: -90px;
+    border-radius: 50%;
+    background: #e8aa34;
+    filter: blur(65px);
+    opacity: .35;
+}
+
+.wallet-card-top,
+.wallet-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.wallet-card-top span:first-child {
+    color: #e7d9bd;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.4px;
+}
+
+.wallet-coin-icon {
+    color: #ffd36b;
+    font-size: 29px;
+}
+
+.wallet-balance-number {
+    margin-top: 17px;
+    color: #ffdc83;
+    font-size: clamp(36px, 10vw, 48px);
+    line-height: 1.1;
+    font-weight: 1000;
+    letter-spacing: 1px;
+    overflow-wrap: anywhere;
+    text-shadow: 0 0 20px #ffbd4544;
+}
+
+.wallet-balance-label {
+    margin-top: 8px;
+    color: #d2c3a4;
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+.wallet-card-footer {
+    margin-top: 27px;
+    padding-top: 13px;
+    border-top: 1px solid #ffffff24;
+    color: #c5b9a2;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+}
+
+/* QUICK ACTIONS */
+
+.wallet-action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 17px 0 22px;
+}
+
+.wallet-action-btn {
+    padding: 16px;
+    border-radius: 15px;
+    text-align: left;
+    color: #fff;
+    background: linear-gradient(145deg, #24202a, #15141b);
+    border: 1px solid #ffffff18;
+    transition: .2s ease;
+}
+
+.wallet-action-btn:active {
+    transform: scale(.96);
+    border-color: #e9b544;
+}
+
+.wallet-action-btn > span {
+    display: block;
+    margin-bottom: 9px;
+    color: #f4bd4f;
+    font-size: 25px;
+}
+
+.wallet-action-btn strong,
+.wallet-action-btn small {
+    display: block;
+}
+
+.wallet-action-btn strong {
+    font-size: 12px;
+    letter-spacing: .5px;
+}
+
+.wallet-action-btn small {
+    margin-top: 5px;
+    color: #999;
+    font-size: 10px;
+}
+
+/* BUY COINS BOX */
+
+.wallet-request-box {
+    padding: 17px;
+    border-radius: 19px;
+    background: linear-gradient(145deg, #201a22, #121218);
+    border: 1px solid #ffffff1b;
+    box-shadow: 0 10px 30px #0004;
+}
+
+.wallet-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.wallet-section-title h3 {
+    margin-top: 5px;
+    font-size: 15px;
+    font-weight: 950;
+}
+
+.wallet-secure-tag {
+    padding: 7px 9px;
+    border-radius: 20px;
+    color: #70e5a0;
+    background: #1d9c5b20;
+    border: 1px solid #70e5a044;
+    font-size: 9px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.wallet-note {
+    margin: 12px 0 18px;
+    color: #aaa;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.wallet-form-label,
+.wallet-utr-box label {
+    display: block;
+    margin: 12px 0 10px;
+    color: #e4d6bd;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .8px;
+}
+
+/* COIN PACKAGE CARDS */
+
+.wallet-package-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.coin-package-card {
+    position: relative;
+    min-width: 0;
+    min-height: 105px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 12px;
+    overflow: hidden;
+    text-align: left;
+    border-radius: 13px;
+    color: #fff;
+    background: linear-gradient(145deg, #29232d, #19171e);
+    border: 1px solid #ffffff1a;
+    transition: .2s ease;
+}
+
+.coin-package-card.active {
+    background:
+        linear-gradient(145deg, #54202a, #25161d);
+    border: 1px solid #f4bd4f;
+    box-shadow: 0 0 18px #f4bd4f25;
+    transform: translateY(-2px);
+}
+
+.package-price {
+    color: #ffd36b;
+    font-size: 22px;
+    font-weight: 1000;
+}
+
+.coin-package-card strong {
+    font-size: 12px;
+    letter-spacing: .4px;
+}
+
+.coin-package-card small {
+    color: #aaa;
+    font-size: 9px;
+}
+
+.package-popular {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 5px 7px;
+    color: #17100a;
+    background: #f4bd4f;
+    border-bottom-left-radius: 9px;
+    font-size: 8px;
+    font-weight: 1000;
+}
+
+.wallet-package-native {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* UPI PAYMENT PANEL */
+
+.upi-payment-box {
+    margin-top: 21px;
+    padding: 16px 13px;
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 50% 35%, #ed202b20, transparent 45%),
+        #101016;
+    border: 1px solid #ed202b55;
+}
+
+.upi-box-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.upi-box-heading h3 {
+    margin-top: 5px;
+    font-size: 17px;
+    font-weight: 1000;
+}
+
+.upi-live-tag {
+    color: #6be49a;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.upi-qr-frame {
+    width: min(230px, 100%);
+    margin: 19px auto;
+    padding: 12px;
+    text-align: center;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 0 25px #f4bd4f20;
+}
+
+.upi-qr-inner {
+    padding: 5px;
+    border-radius: 9px;
+    background: #fff;
+}
+
+.upi-qr-inner img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 5px;
+}
+
+.upi-qr-caption {
+    display: block;
+    margin-top: 9px;
+    color: #292929;
+    font-size: 9px;
+    font-weight: 1000;
+    letter-spacing: .7px;
+}
+
+.upi-payee-info {
+    display: grid;
+    gap: 9px;
+    margin-top: 14px;
+}
+
+.upi-payee-info > div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px;
+    border-radius: 10px;
+    background: #ffffff09;
+    border: 1px solid #ffffff12;
+}
+
+.upi-payee-info small {
+    color: #999;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.upi-payee-info strong {
+    color: #f5d28c;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.upi-copy-btn,
+.wallet-request-box .upi-copy-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 13px;
+    color: #f4bd4f;
+    background: #f4bd4f12;
+    border: 1px solid #f4bd4f66;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.wallet-request-box .upi-pay-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding: 15px;
+    border-radius: 11px;
+    color: #fff;
+    background: linear-gradient(100deg, #a90e1b, #ed3038);
+    box-shadow: 0 6px 20px #ed202b30;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 1000;
+    letter-spacing: .5px;
+}
+
+.upi-pay-button span {
+    font-size: 19px;
+}
+
+.upi-security-note {
+    margin-top: 12px;
+    color: #aaa;
+    text-align: center;
+    font-size: 9px;
+}
+
+/* UTR INPUT */
+
+.wallet-utr-box {
+    margin-top: 20px;
+}
+
+.wallet-utr-box input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px;
+    color: #fff;
+    background: #101016;
+    border: 1px solid #ffffff25;
+    border-radius: 10px;
+    outline: none;
+    font-size: 13px;
+}
+
+.wallet-utr-box input:focus {
+    border-color: #f4bd4f;
+    box-shadow: 0 0 0 3px #f4bd4f15;
+}
+
+.wallet-utr-box > small {
+    display: block;
+    margin-top: 7px;
+    color: #999;
+    font-size: 9px;
+}
+
+.wallet-request-box .wallet-submit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 17px;
+    padding: 16px;
+    color: #1b1208;
+    background: linear-gradient(100deg, #f8d16f, #c68b2c);
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 1000;
+    letter-spacing: .5px;
+    box-shadow: 0 7px 20px #f4bd4f22;
+}
+
+.wallet-request-box .wallet-submit-btn:disabled {
+    opacity: .5;
+}
+
+.wallet-verification-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 15px;
+    padding: 11px;
+    border-radius: 10px;
+    background: #ffffff08;
+}
+
+.wallet-verification-note p {
+    color: #aaa;
+    font-size: 9px;
+    line-height: 1.6;
+}
+
+#coinRequestMessage {
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.wallet-message-success {
+    color: #58d68d;
+}
+
+.wallet-message-error {
+    color: #ff6868;
+}
+
+/* HISTORY */
+
+.wallet-history-heading {
+    margin: 25px 0 13px;
+}
+
+.wallet-request-list,
+.wallet-transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.wallet-request-item,
+.wallet-transaction-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #211d25, #15141a);
+    border: 1px solid #ffffff15;
+}
+
+.wallet-request-item > div,
+.wallet-transaction-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.wallet-request-item strong,
+.wallet-transaction-info strong {
+    font-size: 12px;
+}
+
+.wallet-request-item small,
+.wallet-transaction-info small {
+    color: #999;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.request-status {
+    flex-shrink: 0;
+    padding: 7px 9px;
+    border-radius: 7px;
+    font-size: 9px;
+    font-weight: 1000;
+}
+
+.request-status.pending {
+    color: #edbd51;
+    background: #edbd5118;
+}
+
+.request-status.approved {
+    color: #55dc8d;
+    background: #55dc8d18;
+}
+
+.request-status.rejected {
+    color: #ff6868;
+    background: #ff686818;
+}
+
+.wallet-transaction-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    color: #f4bd4f;
+    background: #f4bd4f18;
+    font-size: 21px;
+}
+
+.wallet-transaction-info {
+    flex: 1;
+}
+
+.wallet-credit {
+    color: #55dc8d;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.wallet-empty-small {
+    padding: 20px;
+    color: #999;
+    text-align: center;
+    background: #19171e;
+    border-radius: 11px;
+    font-size: 11px;
+}
+
+.wallet-footer-note {
+    margin-top: 23px;
+    padding: 12px;
+    color: #777;
+    text-align: center;
+    font-size: 9px;
+    line-height: 1.7;
+}
+
+@media (max-width: 360px) {
+    .wallet-request-box {
+        padding: 13px;
+    }
+
+    .coin-package-card {
+        padding: 12px 9px;
+    }
+
+    .package-price {
+        font-size: 20px;
+    }
+}
