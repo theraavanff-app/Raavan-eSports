@@ -170,6 +170,18 @@ tournamentForm.addEventListener("submit", async e => {
         const entryFees = document.getElementById("tEntry").value.trim();
         const map = document.getElementById("tMap").value.trim();
         const time = document.getElementById("tTime").value.trim();
+        const matchDateTime =
+    document.getElementById("tMatchDateTime").value;
+
+if (!matchDateTime) {
+    throw new Error("Please select match date and time.");
+}
+
+const matchTimestamp = new Date(matchDateTime);
+
+if (Number.isNaN(matchTimestamp.getTime())) {
+    throw new Error("Invalid match date and time.");
+}
 
         const players =
             Number(document.getElementById("tPlayers").value || 0);
@@ -200,6 +212,7 @@ tournamentForm.addEventListener("submit", async e => {
             entryFees,
             map,
             time,
+            matchDateTime: matchTimestamp,
             players,
             capacity,
             isActive: true,
