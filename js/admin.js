@@ -123,7 +123,7 @@ onAuthStateChanged(auth, async user => {
 
     if (walletNote) {
         walletNote.textContent =
-            "UPI payments are manually verified before coins are credited.";
+            "Virtual coins are platform credits. Withdrawals are manually paid by admin.";
     }
 
     await loadTournaments();
