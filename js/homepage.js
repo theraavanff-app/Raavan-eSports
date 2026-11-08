@@ -1525,6 +1525,10 @@ function renderWallet() {
             document.getElementById("walletHistory")
                 ?.scrollIntoView({ behavior: "smooth" });
         }
+        if (event.target.closest("#withdrawCoinsBtn")) {
+    document.getElementById("withdrawalBox")
+        ?.scrollIntoView({ behavior: "smooth" });
+        }
     });
 
     // =================================
