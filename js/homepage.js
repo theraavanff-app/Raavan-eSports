@@ -991,6 +991,37 @@ function renderWallet() {
                 </div>
             `}
         </div>
+                <div class="wallet-section-title wallet-history-heading">
+            <div>
+                <span class="wallet-mini-label">PAYOUT ACTIVITY</span>
+                <h3>WITHDRAWAL REQUESTS</h3>
+            </div>
+            <span>${walletWithdrawals.length} REQUESTS</span>
+        </div>
+
+        <div class="wallet-request-list">
+            ${walletWithdrawals.length ? [...walletWithdrawals].sort((a, b) =>
+                (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+            ).map(item => `
+                <div class="wallet-request-item">
+                    <div>
+                        <strong>
+                            -${Number(item.coins || 0)} Coins (₹${Number(item.amountRupees || item.coins || 0)})
+                        </strong>
+                        <small>Method: ${item.method === "upi" ? "UPI" : "Bank Transfer"}</small>
+                        <small>${formatWalletDate(item.createdAt)}</small>
+                    </div>
+
+                    <span class="request-status ${escapeHTML(item.status || "pending")}">
+                        ${escapeHTML((item.status || "pending").toUpperCase())}
+                    </span>
+                </div>
+            `).join("") : `
+                <div class="wallet-empty-small">
+                    No withdrawal requests yet.
+                </div>
+            `}
+        </div>
 
         <div
             class="wallet-section-title wallet-history-heading"
