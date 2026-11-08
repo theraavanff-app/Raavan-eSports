@@ -743,8 +743,8 @@ return {
                                         <strong>${escapeHTML(item.map)}</strong>
                                     </div>
                                     <div>
-                                        <small>TIME</small>
-                                        <strong>${escapeHTML(item.time)}</strong>
+                                        <small>MATCH TIME</small>
+<strong>${escapeHTML(formatMatchDateTime(item))}</strong>
                                     </div>
                                 </div>
 
