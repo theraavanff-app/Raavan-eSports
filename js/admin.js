@@ -418,6 +418,103 @@ if (roomButton) {
         alert("Tournament delete failed: " + error.message);
     }
 });
+// =====================================
+// ROOM MANAGEMENT ACTIONS
+// =====================================
+
+const roomManagementForm =
+    document.getElementById("roomManagementForm");
+
+const roomModal =
+    document.getElementById("roomManagementModal");
+
+const closeRoomModal =
+    document.getElementById("closeRoomModal");
+
+const unpublishRoomBtn =
+    document.getElementById("unpublishRoomBtn");
+
+const roomManagementMessage =
+    document.getElementById("roomManagementMessage");
+
+// CLOSE POPUP
+closeRoomModal.addEventListener("click", () => {
+    roomModal.hidden = true;
+    activeRoomTournamentId = null;
+});
+
+// PUBLISH / UPDATE ROOM
+roomManagementForm.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    if (!adminVerified || !activeRoomTournamentId) return;
+
+    const roomId =
+        document.getElementById("roomIdInput").value.trim();
+
+    const password =
+        document.getElementById("roomPasswordInput").value.trim();
+
+    if (!roomId || !password) {
+        roomManagementMessage.textContent =
+            "Please enter Room ID and Password.";
+        return;
+    }
+
+    roomManagementMessage.textContent = "Publishing room details...";
+
+    try {
+        await setDoc(
+            doc(db, "tournamentRooms", activeRoomTournamentId),
+            {
+                tournamentId: activeRoomTournamentId,
+                roomId,
+                password,
+                published: true,
+                updatedAt: serverTimestamp()
+            },
+            { merge: true }
+        );
+
+        roomManagementMessage.textContent =
+            "Room details published successfully!";
+
+    } catch (error) {
+        console.error("Room publish error:", error);
+
+        roomManagementMessage.textContent =
+            "Publish failed: " + error.message;
+    }
+});
+
+// UNPUBLISH ROOM
+unpublishRoomBtn.addEventListener("click", async () => {
+
+    if (!adminVerified || !activeRoomTournamentId) return;
+
+    roomManagementMessage.textContent = "Unpublishing room...";
+
+    try {
+        await setDoc(
+            doc(db, "tournamentRooms", activeRoomTournamentId),
+            {
+                tournamentId: activeRoomTournamentId,
+                published: false,
+                updatedAt: serverTimestamp()
+            },
+            { merge: true }
+        );
+
+        roomManagementMessage.textContent =
+            "Room details unpublished successfully!";
+
+    } catch (error) {
+        console.error("Room unpublish error:", error);
+
+        roomManagementMessage.textContent =
+            "Unpublish failed: " + error.message;
+    }
+});
 
 // =====================================
 // LOAD JOINED PLAYERS
