@@ -999,19 +999,58 @@ function renderWallet() {
         );
     }
 
-    // =================================
+        // =================================
     // UPI PACKAGE SELECTION
     // =================================
+
+    walletPage.addEventListener("click", event => {
+        const packageCard = event.target.closest(".coin-package-card");
+
+        if (!packageCard) return;
+
+        const amount = Number(packageCard.dataset.package);
+
+        if (!COIN_PACKAGES.includes(amount)) return;
+
+        const select = walletPage.querySelector("#coinAmount");
+
+        if (!select) return;
+
+        // Update selected package
+        select.value = String(amount);
+
+        // Trigger existing UPI payment link logic
+        select.dispatchEvent(
+            new Event("change", { bubbles: true })
+        );
+
+        // Update selected card design
+        walletPage.querySelectorAll(".coin-package-card")
+            .forEach(card => {
+                card.classList.remove("active");
+            });
+
+        packageCard.classList.add("active");
+    });
 
     walletPage.addEventListener("change", event => {
         if (event.target.id !== "coinAmount") return;
 
         const amount = Number(event.target.value);
+
         const payButton =
-            document.getElementById("payWithUpiBtn");
+            walletPage.querySelector("#payWithUpiBtn");
+
+        if (!payButton) return;
 
         if (!COIN_PACKAGES.includes(amount)) {
             payButton.href = "#";
+
+            walletPage.querySelectorAll(".coin-package-card")
+                .forEach(card => {
+                    card.classList.remove("active");
+                });
+
             return;
         }
 
@@ -1023,8 +1062,16 @@ function renderWallet() {
         });
 
         payButton.href = `upi://pay?${params.toString()}`;
-    });
 
+        // Keep card and dropdown selection synchronized
+        walletPage.querySelectorAll(".coin-package-card")
+            .forEach(card => {
+                card.classList.toggle(
+                    "active",
+                    Number(card.dataset.package) === amount
+                );
+            });
+    });
     // =================================
     // COPY UPI ID
     // =================================
