@@ -658,119 +658,175 @@ export function initHomepage() {
     // WALLET RENDER
     // =================================
 
-    function renderWallet() {
-        const user = auth.currentUser;
+    
+function renderWallet() {
+    const user = auth.currentUser;
 
-        if (!user) {
-            walletPage.innerHTML = `
-                <div class="wallet-empty">
-                    <h3>Please Login First</h3>
-                </div>
-            `;
-            return;
-        }
-
-        const history = [...walletTransactions].sort((a, b) =>
-            (b.createdAt?.toMillis?.() || 0) -
-            (a.createdAt?.toMillis?.() || 0)
-        );
-
-        const requests = [...walletRequests].sort((a, b) =>
-            (b.createdAt?.toMillis?.() || 0) -
-            (a.createdAt?.toMillis?.() || 0)
-        );
-
+    if (!user) {
         walletPage.innerHTML = `
-            <div class="wallet-heading">
+            <div class="wallet-empty">
+                <h3>Please Login First</h3>
+            </div>
+        `;
+        return;
+    }
+
+    const history = [...walletTransactions].sort((a, b) =>
+        (b.createdAt?.toMillis?.() || 0) -
+        (a.createdAt?.toMillis?.() || 0)
+    );
+
+    const requests = [...walletRequests].sort((a, b) =>
+        (b.createdAt?.toMillis?.() || 0) -
+        (a.createdAt?.toMillis?.() || 0)
+    );
+
+    walletPage.innerHTML = `
+        <div class="wallet-heading">
+            <span class="wallet-eyebrow">✦ RAAVAN ESPORTS ✦</span>
+            <h2>MY <span>WALLET</span></h2>
+            <p>Your coins. Your battle. Your glory.</p>
+        </div>
+
+        <div class="wallet-balance-card">
+            <div class="wallet-card-glow"></div>
+
+            <div class="wallet-card-top">
+                <span>✦ AVAILABLE BALANCE</span>
+                <span class="wallet-coin-icon">◈</span>
+            </div>
+
+            <div class="wallet-balance-number">
+                ${walletBalance.toLocaleString("en-IN")}
+            </div>
+
+            <p class="wallet-balance-label">RAAVAN VIRTUAL COINS</p>
+
+            <div class="wallet-card-footer">
                 <span>RAAVAN ESPORTS</span>
-                <h2>MY WALLET</h2>
-                <p>Manage your virtual coins.</p>
+                <span>PLAYER WALLET ✦</span>
             </div>
+        </div>
 
-            <div class="wallet-balance-card">
-                <div class="wallet-card-top">
-                    <span>AVAILABLE BALANCE</span>
-                    <span class="wallet-coin-icon">◈</span>
-                </div>
+        <div class="wallet-action-grid">
+            <button class="wallet-action-btn" id="addCoinsBtn">
+                <span>＋</span>
+                <strong>BUY COINS</strong>
+                <small>Get more coins</small>
+            </button>
 
-                <h1>${walletBalance.toLocaleString("en-IN")}</h1>
-                <p>VIRTUAL COINS</p>
+            <button class="wallet-action-btn" id="walletHistoryBtn">
+                <span>▤</span>
+                <strong>HISTORY</strong>
+                <small>Track your activity</small>
+            </button>
+        </div>
 
-                <div class="wallet-card-footer">
-                    <span>RAAVAN ESPORTS</span>
-                    <span>PLAYER WALLET</span>
-                </div>
-            </div>
+        <section class="wallet-request-box" id="walletRequestBox">
 
-            <div class="wallet-action-grid">
-                <button class="wallet-action-btn" id="addCoinsBtn">
-                    <span>＋</span>
-                    <strong>ADD COINS</strong>
-                    <small>Buy coin package</small>
-                </button>
-
-                <button class="wallet-action-btn" id="walletHistoryBtn">
-                    <span>▤</span>
-                    <strong>HISTORY</strong>
-                    <small>View transactions</small>
-                </button>
-            </div>
-
-            <div class="wallet-request-box" id="walletRequestBox">
-                <div class="wallet-section-title">
+            <div class="wallet-section-title">
+                <div>
+                    <span class="wallet-mini-label">POWER UP YOUR GAME</span>
                     <h3>BUY RAAVAN COINS</h3>
-                    <span>UPI PAYMENT</span>
+                </div>
+                <span class="wallet-secure-tag">✦ SECURE UPI</span>
+            </div>
+
+            <p class="wallet-note">
+                Choose your coin pack and pay instantly using any UPI app.
+            </p>
+
+            <form id="coinRequestForm">
+
+                <label class="wallet-form-label">
+                    SELECT YOUR COIN PACKAGE
+                </label>
+
+                <div class="wallet-package-grid">
+                    ${COIN_PACKAGES.map(amount => `
+                        <button
+                            type="button"
+                            class="coin-package-card"
+                            data-package="${amount}"
+                        >
+                            ${amount === 50 ? `
+                                <span class="package-popular">POPULAR</span>
+                            ` : ""}
+
+                            <span class="package-price">₹${amount}</span>
+                            <strong>${amount} COINS</strong>
+                            <small>Instant UPI payment</small>
+                        </button>
+                    `).join("")}
                 </div>
 
-                <p class="wallet-note">
-                    Select a package, pay using UPI and submit your UTR.
-                    Coins are credited only after admin verification.
-                </p>
+                <select id="coinAmount" class="wallet-package-native"
+                    aria-label="Selected coin package">
+                    <option value="">Select package</option>
+                    ${COIN_PACKAGES.map(amount => `
+                        <option value="${amount}">
+                            ₹${amount} — ${amount} Coins
+                        </option>
+                    `).join("")}
+                </select>
 
-                <form id="coinRequestForm">
-                    <label for="coinAmount">Select Coin Package</label>
+                <div class="upi-payment-box">
 
-                    <select id="coinAmount" required>
-                        <option value="">Select package</option>
-                        ${COIN_PACKAGES.map(amount => `
-                            <option value="${amount}">
-                                ₹${amount} — ${amount} Coins
-                            </option>
-                        `).join("")}
-                    </select>
-
-                    <div class="upi-payment-box">
-                        <h3>PAYMENT DETAILS</h3>
-
-                        <p><strong>Payee:</strong> ${PAYEE_NAME}</p>
-
-                        <p>
-                            <strong>UPI ID:</strong>
-                            ${UPI_ID}
-                        </p>
-
-                        <button type="button" id="copyUpiBtn">
-                            COPY UPI ID
-                        </button>
-
-                        <img
-                            src="assets/upi-qr.jpg"
-                            alt="UPI QR Code"
-                            style="width:200px;max-width:100%;display:block;margin:15px auto;"
-                        >
-
-                        <a
-                            id="payWithUpiBtn"
-                            href="#"
-                            target="_blank"
-                            rel="noopener"
-                        >
-                            PAY WITH UPI APP
-                        </a>
+                    <div class="upi-box-heading">
+                        <div>
+                            <span class="wallet-mini-label">SCAN & PAY</span>
+                            <h3>PAY WITH UPI</h3>
+                        </div>
+                        <span class="upi-live-tag">● LIVE</span>
                     </div>
 
+                    <div class="upi-qr-frame">
+                        <div class="upi-qr-inner">
+                            <img
+                                src="assets/upi-qr.jpg"
+                                alt="Gautam Sahu UPI payment QR code"
+                            >
+                        </div>
+                        <span class="upi-qr-caption">
+                            SCAN USING ANY UPI APP
+                        </span>
+                    </div>
+
+                    <div class="upi-payee-info">
+                        <div>
+                            <small>PAYEE NAME</small>
+                            <strong>Gautam Sahu</strong>
+                        </div>
+
+                        <div>
+                            <small>UPI ID</small>
+                            <strong class="upi-id-text">
+                                gautam.raj-sahu@pthdfc
+                            </strong>
+                        </div>
+                    </div>
+
+                    <button type="button" id="copyUpiBtn"
+                        class="upi-copy-btn">
+                        ⧉ COPY UPI ID
+                    </button>
+
+                    <a
+                        id="payWithUpiBtn"
+                        href="#"
+                        class="upi-pay-button"
+                    >
+                        PAY WITH UPI APP <span>↗</span>
+                    </a>
+
+                    <p class="upi-security-note">
+                        🔒 Verify the payee name and amount before paying.
+                    </p>
+                </div>
+
+                <div class="wallet-utr-box">
                     <label for="coinUtr">
-                        Payment UTR / Reference Number
+                        PAYMENT UTR / REFERENCE NUMBER
                     </label>
 
                     <input
@@ -778,95 +834,114 @@ export function initHomepage() {
                         id="coinUtr"
                         minlength="8"
                         maxlength="20"
-                        placeholder="Enter payment UTR"
+                        placeholder="Enter your 8–20 digit UTR"
                         autocomplete="off"
                         required
                     >
 
-                    <button type="submit" id="submitCoinRequest">
-                        SUBMIT PAYMENT
-                    </button>
-
-                    <p id="coinRequestMessage"></p>
-
                     <small>
-                        Enter the actual UTR from your payment app.
-                        Admin will verify the payment before crediting coins.
+                        Find your UTR in your UPI app's payment details.
                     </small>
-                </form>
-            </div>
+                </div>
 
-            <div class="wallet-section-title wallet-history-heading">
-                <h3>REQUEST HISTORY</h3>
-                <span>${requests.length} REQUESTS</span>
-            </div>
+                <button type="submit" id="submitCoinRequest"
+                    class="wallet-submit-btn">
+                    SUBMIT PAYMENT REQUEST <span>➜</span>
+                </button>
 
-            <div class="wallet-request-list">
-                ${requests.length ? requests.map(item => `
-                    <div class="wallet-request-item">
-                        <div>
-                            <strong>+${Number(item.coins || item.amount || 0)} Coins</strong>
-                            <small>UTR: ${escapeHTML(item.utr || "N/A")}</small>
+                <p id="coinRequestMessage"></p>
+
+                <div class="wallet-verification-note">
+                    <span>🛡️</span>
+                    <p>
+                        Coins are added after admin verifies your payment.
+                        Never submit a fake or incorrect UTR.
+                    </p>
+                </div>
+
+            </form>
+        </section>
+
+        <div class="wallet-section-title wallet-history-heading">
+            <div>
+                <span class="wallet-mini-label">YOUR ACTIVITY</span>
+                <h3>PAYMENT REQUESTS</h3>
+            </div>
+            <span>${requests.length} REQUESTS</span>
+        </div>
+
+        <div class="wallet-request-list">
+            ${requests.length ? requests.map(item => `
+                <div class="wallet-request-item">
+                    <div>
+                        <strong>
+                            +${Number(item.coins || item.amount || 0)} Coins
+                        </strong>
+                        <small>UTR: ${escapeHTML(item.utr || "N/A")}</small>
+                        <small>${formatWalletDate(item.createdAt)}</small>
+                    </div>
+
+                    <span class="request-status ${escapeHTML(item.status || "pending")}">
+                        ${escapeHTML((item.status || "pending").toUpperCase())}
+                    </span>
+                </div>
+            `).join("") : `
+                <div class="wallet-empty-small">
+                    No payment requests yet.
+                </div>
+            `}
+        </div>
+
+        <div
+            class="wallet-section-title wallet-history-heading"
+            id="walletHistory"
+        >
+            <div>
+                <span class="wallet-mini-label">COIN RECORDS</span>
+                <h3>TRANSACTION HISTORY</h3>
+            </div>
+            <span>${history.length} RECORDS</span>
+        </div>
+
+        <div class="wallet-transaction-list">
+            ${history.length ? history.map(item => {
+                const type = item.type || "transaction";
+
+                const title = type === "admin_bonus"
+                    ? "Admin Bonus"
+                    : type === "deposit_approved"
+                        ? "UPI Payment Approved"
+                        : "Wallet Transaction";
+
+                return `
+                    <div class="wallet-transaction-item">
+                        <div class="wallet-transaction-icon">◈</div>
+
+                        <div class="wallet-transaction-info">
+                            <strong>${title}</strong>
+                            <small>${escapeHTML(item.description || "Virtual coins")}</small>
                             <small>${formatWalletDate(item.createdAt)}</small>
                         </div>
 
-                        <span class="request-status ${escapeHTML(item.status || "pending")}">
-                            ${escapeHTML((item.status || "pending").toUpperCase())}
-                        </span>
+                        <strong class="wallet-credit">
+                            +${Number(item.amount || 0)}
+                        </strong>
                     </div>
-                `).join("") : `
-                    <div class="wallet-empty-small">
-                        No coin requests yet.
-                    </div>
-                `}
-            </div>
+                `;
+            }).join("") : `
+                <div class="wallet-empty-small">
+                    No transactions yet.
+                </div>
+            `}
+        </div>
 
-            <div
-                class="wallet-section-title wallet-history-heading"
-                id="walletHistory"
-            >
-                <h3>TRANSACTION HISTORY</h3>
-                <span>${history.length} RECORDS</span>
-            </div>
+        <p class="wallet-footer-note">
+            RAAVAN ESPORTS • Virtual platform coins •
+            Payments manually verified by admin.
+        </p>
+    `;
+}
 
-            <div class="wallet-transaction-list">
-                ${history.length ? history.map(item => {
-                    const type = item.type || "transaction";
-
-                    const title = type === "admin_bonus"
-                        ? "Admin Bonus"
-                        : type === "deposit_approved"
-                            ? "UPI Payment Approved"
-                            : "Wallet Transaction";
-
-                    return `
-                        <div class="wallet-transaction-item">
-                            <div class="wallet-transaction-icon">◈</div>
-
-                            <div class="wallet-transaction-info">
-                                <strong>${title}</strong>
-                                <small>${escapeHTML(item.description || "Virtual coins")}</small>
-                                <small>${formatWalletDate(item.createdAt)}</small>
-                            </div>
-
-                            <strong class="wallet-credit">
-                                +${Number(item.amount || 0)}
-                            </strong>
-                        </div>
-                    `;
-                }).join("") : `
-                    <div class="wallet-empty-small">
-                        No transactions yet.
-                    </div>
-                `}
-            </div>
-
-            <p class="wallet-footer-note">
-                Coin purchases are manually verified. Coins are virtual
-                platform credits and are not a bank balance.
-            </p>
-        `;
-    }
 
     // =================================
     // WALLET LISTENERS
