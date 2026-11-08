@@ -48,6 +48,7 @@ let unsubscribeTournaments = null;
 
 let walletBalance = 0;
 let walletRequests = [];
+let walletWithdrawals = [];
 let walletTransactions = [];
 
 let walletListenersStarted = false;
