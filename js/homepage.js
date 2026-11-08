@@ -703,11 +703,17 @@ document.getElementById("copyRoomPassword")
 
                     if (!tournamentSnap.exists()) return null;
 
-                    if (tournamentSnap.data().isActive === false) {
-                        return null;
-                    }
+const tournamentData = tournamentSnap.data();
 
-                    return item;
+if (tournamentData.isActive === false) {
+    return null;
+}
+
+return {
+    ...item,
+    matchDateTime: tournamentData.matchDateTime,
+    time: tournamentData.time || item.time
+};
                 })
             );
 
