@@ -32,6 +32,21 @@ service cloud.firestore {
       return /databases/$(database)/documents/utrClaims/$(utr);
     }
 
+function tournamentPath(id) {
+  return /databases/$(database)/documents/tournaments/$(id);
+}
+
+function tournamentJoinPath(id, uid) {
+  return /databases/$(database)/documents/tournamentJoins/$(id + "_" + uid);
+}
+
+function walletPath(uid) {
+  return /databases/$(database)/documents/wallets/$(uid);
+}
+
+function entryHistoryPath(id, uid) {
+  return /databases/$(database)/documents/walletTransactions/("tournament_entry_" + id + "_" + uid);
+}
     // USER PROFILES
     match /users/{userId} {
       allow get: if isAdmin() ||
