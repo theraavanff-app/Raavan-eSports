@@ -37,7 +37,6 @@ export function initAuthPage() {
 
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                window.location.href = "./home.html";
 
             } catch (error) {
                 errorBox.textContent = error.message;
