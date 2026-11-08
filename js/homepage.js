@@ -1081,6 +1081,21 @@ function renderWallet() {
             },
             error => console.error("Wallet requests:", error)
         );
+                onSnapshot(
+            query(
+                collection(db, "withdrawalRequests"),
+                where("uid", "==", user.uid)
+            ),
+            snapshot => {
+                walletWithdrawals = snapshot.docs.map(item => ({
+                    id: item.id,
+                    ...item.data()
+                }));
+
+                renderWallet();
+            },
+            error => console.error("Wallet withdrawals:", error)
+        );
 
         onSnapshot(
             query(
