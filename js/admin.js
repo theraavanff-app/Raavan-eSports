@@ -65,6 +65,8 @@ const bonusMessage = document.getElementById("bonusMessage");
 
 const coinRequestsList =
     document.getElementById("coinRequestsList");
+const withdrawalRequestsList =
+    document.getElementById("withdrawalRequestsList");
 
 const adminWalletHistory =
     document.getElementById("adminWalletHistory");
