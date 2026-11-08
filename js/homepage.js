@@ -1191,6 +1191,157 @@ function renderWallet() {
             bankBox.style.display = "block";
         }
     });
+        // =================================
+    // SUBMIT WITHDRAWAL REQUEST
+    // =================================
+
+    walletPage.addEventListener("submit", async event => {
+        if (event.target.id !== "withdrawalForm") return;
+
+        event.preventDefault();
+
+        const user = auth.currentUser;
+        const message = walletPage.querySelector("#withdrawalMessage");
+        const button = walletPage.querySelector("#submitWithdrawal");
+
+        if (!user) {
+            message.textContent = "Please login first.";
+            message.className = "wallet-message-error";
+            return;
+        }
+
+        const coins = Number(
+            walletPage.querySelector("#withdrawalCoins").value
+        );
+
+        const method =
+            walletPage.querySelector("#withdrawalMethod").value;
+
+        if (!Number.isInteger(coins) || coins < 10 || coins > 1000000) {
+            message.textContent = "Minimum withdrawal is 10 coins.";
+            message.className = "wallet-message-error";
+            return;
+        }
+
+        let payoutDetails = {};
+
+        if (method === "upi") {
+            const upiId = walletPage.querySelector("#withdrawalUpiId")
+                .value.trim();
+
+            if (!/^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+$/.test(upiId)) {
+                message.textContent = "Enter a valid UPI ID.";
+                message.className = "wallet-message-error";
+                return;
+            }
+
+            payoutDetails = { upiId: upiId };
+
+        } else if (method === "bank") {
+            const accountHolder = walletPage.querySelector("#withdrawalAccountHolder")
+                .value.trim();
+
+            const accountNumber = walletPage.querySelector("#withdrawalAccountNumber")
+                .value.trim();
+
+            const ifsc = walletPage.querySelector("#withdrawalIfsc")
+                .value.trim().toUpperCase();
+
+            const bankName = walletPage.querySelector("#withdrawalBankName")
+                .value.trim();
+
+            if (
+                accountHolder.length < 2 ||
+                !/^[0-9]{9,18}$/.test(accountNumber) ||
+                !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc) ||
+                bankName.length < 2
+            ) {
+                message.textContent = "Please enter valid bank details.";
+                message.className = "wallet-message-error";
+                return;
+            }
+
+            payoutDetails = {
+                accountHolder,
+                accountNumber,
+                ifsc,
+                bankName
+            };
+
+        } else {
+            message.textContent = "Select a valid payout method.";
+            message.className = "wallet-message-error";
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "SUBMITTING...";
+
+        try {
+            const walletRef = doc(db, "wallets", user.uid);
+
+            const requestRef = doc(
+                collection(db, "withdrawalRequests")
+            );
+
+            await runTransaction(db, async transaction => {
+                const walletSnap = await transaction.get(walletRef);
+
+                if (!walletSnap.exists()) {
+                    throw new Error("Wallet not found.");
+                }
+
+                const currentBalance = Number(
+                    walletSnap.data().balance || 0
+                );
+
+                if (
+                    !Number.isInteger(currentBalance) ||
+                    currentBalance < coins
+                ) {
+                    throw new Error("Insufficient wallet balance.");
+                }
+
+                transaction.set(requestRef, {
+                    uid: user.uid,
+                    coins: coins,
+                    amountRupees: coins,
+                    method: method,
+                    ...payoutDetails,
+                    status: "pending",
+                    createdAt: serverTimestamp()
+                });
+
+                transaction.update(walletRef, {
+                    balance: currentBalance - coins,
+                    updatedAt: serverTimestamp(),
+                    lastWithdrawalRequestId: requestRef.id
+                });
+            });
+
+            message.textContent =
+                "Withdrawal request submitted successfully!";
+
+            message.className = "wallet-message-success";
+
+            event.target.reset();
+
+            walletPage.querySelector("#withdrawalUpiBox").style.display = "block";
+            walletPage.querySelector("#withdrawalBankBox").style.display = "none";
+
+        } catch (error) {
+            console.error("Withdrawal request error:", error);
+
+            message.textContent =
+                error.message || "Request failed. Please try again.";
+
+            message.className = "wallet-message-error";
+
+        } finally {
+            button.disabled = false;
+            button.textContent = "SUBMIT WITHDRAWAL REQUEST ➜";
+        }
+    });
     // =================================
     // COPY UPI ID
     // =================================
