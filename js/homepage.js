@@ -2007,9 +2007,10 @@ function renderWallet() {
             newBalance = balance - entryFee;
 
             transaction.update(walletRef, {
-                balance: newBalance,
-                updatedAt: serverTimestamp()
-            });
+    balance: newBalance,
+    updatedAt: serverTimestamp(),
+    lastEntryTournamentId: String(id)
+});
 
             transaction.set(historyRef, {
                 uid: user.uid,
