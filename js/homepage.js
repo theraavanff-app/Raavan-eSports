@@ -262,7 +262,150 @@ roomDetailsModal.innerHTML = `
 `;
 
 document.body.appendChild(roomDetailsModal);
+// =================================
+// ROOM DETAILS FUNCTIONALITY
+// =================================
 
+let roomUnsubscribe = null;
+
+const closeRoomDetails = () => {
+    roomDetailsModal.classList.add("hidden");
+
+    if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+    }
+};
+
+document.getElementById("closeRoomDetails")
+    .addEventListener("click", closeRoomDetails);
+
+roomDetailsModal.addEventListener("click", e => {
+    if (e.target === roomDetailsModal) {
+        closeRoomDetails();
+    }
+});
+
+async function openRoomDetails(tournamentId) {
+    const status = document.getElementById("roomDetailsStatus");
+    const credentials = document.getElementById("roomCredentials");
+
+    credentials.hidden = true;
+    status.textContent = "Loading room details...";
+
+    roomDetailsModal.classList.remove("hidden");
+
+    if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+    }
+
+    try {
+        const tournamentSnap = await getDoc(
+            doc(db, "tournaments", String(tournamentId))
+        );
+
+        let matchTime = null;
+
+        if (tournamentSnap.exists()) {
+            const matchDateTime =
+                tournamentSnap.data().matchDateTime;
+
+            if (matchDateTime?.toDate) {
+                matchTime = matchDateTime.toDate();
+            } else if (matchDateTime) {
+                matchTime = new Date(matchDateTime);
+            }
+        }
+
+        roomUnsubscribe = onSnapshot(
+            doc(db, "tournamentRooms", String(tournamentId)),
+            roomSnap => {
+                if (roomSnap.exists() && roomSnap.data().published === true) {
+                    const data = roomSnap.data();
+
+                    document.getElementById("displayRoomId")
+                        .textContent = data.roomId || "";
+
+                    document.getElementById("displayRoomPassword")
+                        .textContent = data.password || "";
+
+                    credentials.hidden = false;
+                    status.textContent = "ROOM DETAILS PUBLISHED!";
+                    return;
+                }
+
+                credentials.hidden = true;
+
+                if (matchTime && !Number.isNaN(matchTime.getTime())) {
+                    const minutesLeft =
+                        (matchTime.getTime() - Date.now()) / 60000;
+
+                    if (minutesLeft > 5) {
+                        status.textContent =
+                            "COMING SOON — Room details will be published 5 minutes before match time.";
+                    } else if (minutesLeft > 0) {
+                        status.textContent =
+                            "ROOM DETAILS EXPECTED SOON — PLEASE WAIT FOR ADMIN.";
+                    } else {
+                        status.textContent =
+                            "ROOM DETAILS NOT AVAILABLE — PLEASE WAIT FOR ADMIN.";
+                    }
+                } else {
+                    status.textContent =
+                        "COMING SOON — Please wait for admin to publish room details.";
+                }
+            },
+            error => {
+                console.error("Room listener error:", error);
+                status.textContent =
+                    "Unable to load room details. Please try again.";
+            }
+        );
+
+    } catch (error) {
+        console.error("Room details error:", error);
+        status.textContent =
+            "Unable to load room details. Please try again.";
+    }
+}
+
+// ROOM BUTTON CLICK
+document.addEventListener("click", e => {
+    const button = e.target.closest(".room-details-btn");
+
+    if (!button) return;
+
+    openRoomDetails(button.dataset.id);
+});
+
+// COPY ROOM ID
+document.getElementById("copyRoomId")
+    .addEventListener("click", async () => {
+        const value =
+            document.getElementById("displayRoomId").textContent;
+
+        try {
+            await navigator.clipboard.writeText(value);
+            document.getElementById("copyRoomId").textContent = "COPIED!";
+        } catch (error) {
+            alert("Copy failed. Please copy manually.");
+        }
+    });
+
+// COPY ROOM PASSWORD
+document.getElementById("copyRoomPassword")
+    .addEventListener("click", async () => {
+        const value =
+            document.getElementById("displayRoomPassword").textContent;
+
+        try {
+            await navigator.clipboard.writeText(value);
+            document.getElementById("copyRoomPassword").textContent = "COPIED!";
+        } catch (error) {
+            alert("Copy failed. Please copy manually.");
+        }
+    });
     // =================================
     // SUCCESS TOAST
     // =================================
