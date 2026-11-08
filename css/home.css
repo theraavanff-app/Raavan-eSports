@@ -2101,3 +2101,134 @@
         font-size: 20px;
     }
 }
+/* =================================
+   ROOM DETAILS POPUP
+================================= */
+
+.room-details-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(9px);
+}
+
+.room-details-modal.hidden {
+    display: none;
+}
+
+.room-details-content {
+    position: relative;
+    width: 100%;
+    max-width: 390px;
+    padding: 30px 22px 24px;
+    text-align: center;
+    color: #fff;
+    background: linear-gradient(145deg, #202020, #090909);
+    border: 1px solid #d6a928;
+    border-radius: 22px;
+    box-shadow: 0 0 35px rgba(255, 190, 0, 0.18);
+}
+
+.room-details-close {
+    position: absolute;
+    top: 12px;
+    right: 15px;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #555;
+    border-radius: 50%;
+    background: #292929;
+    color: white;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+.room-details-icon {
+    font-size: 42px;
+    margin-bottom: 10px;
+}
+
+.room-details-tag {
+    color: #e8b936;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+}
+
+.room-details-content h2 {
+    margin: 12px 0;
+    font-size: 25px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+#roomDetailsStatus {
+    margin: 12px 0 22px;
+    color: #e8b936;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.room-credential-box {
+    margin-top: 14px;
+    padding: 16px;
+    text-align: left;
+    background: #171717;
+    border: 1px solid #444;
+    border-radius: 14px;
+}
+
+.room-credential-box small {
+    display: block;
+    margin-bottom: 9px;
+    color: #aaa;
+    font-size: 11px;
+    letter-spacing: 2px;
+}
+
+.room-credential-box strong {
+    display: block;
+    margin-bottom: 13px;
+    color: #fff;
+    font-size: 20px;
+    overflow-wrap: anywhere;
+}
+
+.room-credential-box button {
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: 9px;
+    background: linear-gradient(90deg, #d49b16, #ffdf69);
+    color: #111;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.room-details-footer {
+    margin: 22px 0 0;
+    color: #888;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.room-card-action {
+    margin-top: 12px;
+}
+
+.room-details-btn {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d6a928;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #241b08, #3a2b0c);
+    color: #ffdc65;
+    font-weight: 800;
+    letter-spacing: .5px;
+    cursor: pointer;
+}
