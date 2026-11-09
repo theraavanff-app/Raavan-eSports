@@ -2517,6 +2517,7 @@ roster,
                         messaging.getToken({
                             callback: function (tokenResult) {
                                 const token = tokenResult.token;
+                                alert(token ? "FCM TOKEN GENERATED SUCCESSFULLY" : "FCM TOKEN NOT GENERATED");
 
                                 if (!token) {
                                     alert("ERROR: FCM token not generated.");
