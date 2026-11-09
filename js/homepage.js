@@ -2486,34 +2486,23 @@ roster,
     // =================================
 
     let medianBridgeReady = false;
-    let fcmSetupStarted = false;
-
-    window.median_library_ready = function () {
-        medianBridgeReady = true;
-        console.log("Median FCM bridge ready");
-    };
-
-    if (window.median) {
-        window.median_library_ready();
-    }
+        let fcmSetupStarted = false;
 
     function activatePushNotifications() {
-        if (
-            !medianBridgeReady ||
-            !window.median?.firebaseMessaging ||
-            fcmSetupStarted
-        ) {
+        const messaging = window.median?.firebaseMessaging;
+
+        if (!messaging) {
+            alert("ERROR: Median FCM bridge not available. Rebuild app and check plugin.");
             return;
         }
 
+        if (fcmSetupStarted) return;
         fcmSetupStarted = true;
-
-        const messaging = window.median.firebaseMessaging;
 
         messaging.requestPermission({
             callback: function (permission) {
                 if (!permission.granted) {
-                    console.log("Push permission not granted");
+                    alert("Notification permission denied.");
                     fcmSetupStarted = false;
                     return;
                 }
@@ -2522,13 +2511,41 @@ roster,
                     callback: function (registration) {
                         console.log("FCM registration:", registration);
 
-                        messaging.subscribeToTopic({
-                            topic: "raavan_all_players",
-                            callback: function (result) {
-                                console.log(
-                                    "Player topic subscription:",
-                                    result.success
-                                );
+                        messaging.getToken({
+                            callback: function (tokenResult) {
+                                const token = tokenResult.token;
+
+                                if (!token) {
+                                    alert("ERROR: FCM token not generated.");
+                                    fcmSetupStarted = false;
+                                    return;
+                                }
+
+                                messaging.subscribeToTopic({
+                                    topic: "raavan_all_players",
+                                    callback: function (result) {
+                                        messaging.getSubscribedTopics({
+                                            callback: function (topicsResult) {
+                                                const topics =
+                                                    topicsResult.topics || [];
+
+                                                const subscribed =
+                                                    topics.includes("raavan_all_players");
+
+                                                alert(
+                                                    "FCM DIAGNOSTIC\n\n" +
+                                                    "Token: GENERATED\n" +
+                                                    "Token preview: " +
+                                                    token.substring(0, 12) + "...\n\n" +
+                                                    "Topic subscription: " +
+                                                    (result.success ? "SUCCESS" : "FAILED") +
+                                                    "\nTopic verified: " +
+                                                    (subscribed ? "YES" : "NO")
+                                                );
+                                            }
+                                        });
+                                    }
+                                });
                             }
                         });
                     }
@@ -2539,7 +2556,6 @@ roster,
 
     notificationBtn?.addEventListener("click", () => {
         activatePushNotifications();
-
         notificationModal.style.display = "flex";
         renderPlayerNotifications();
     });
