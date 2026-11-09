@@ -1,5 +1,5 @@
 
-import { initHomepage } from "./homepage.js?v=4";
+import { initHomepage } from "./homepage.js?v=5";
 import { initAuthPage } from "./auth.js";
 import { auth } from "./firebase.js";
 
