@@ -142,7 +142,8 @@ function validPaidJoin(id, uid) {
     && existsAfter(tournamentJoinPath(id, uid))
     && joinAfter.uid == uid
     && joinAfter.tournamentId == id
-    && validJoinRoster(joinAfter, tournament)
+    && joinAfter.roster is list
+&& joinAfter.roster.size() in [1, 2, 4]
     && tournament.players is int
     && tournament.capacity is int
     && tournamentAfter.players == tournament.players + joinAfter.roster.size()
