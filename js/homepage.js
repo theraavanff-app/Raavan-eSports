@@ -2481,7 +2481,65 @@ roster,
         }).join("");
     }
 
+        // =================================
+    // MEDIAN FCM PUSH NOTIFICATIONS
+    // =================================
+
+    let medianBridgeReady = false;
+    let fcmSetupStarted = false;
+
+    window.median_library_ready = function () {
+        medianBridgeReady = true;
+        console.log("Median FCM bridge ready");
+    };
+
+    if (window.median) {
+        window.median_library_ready();
+    }
+
+    function activatePushNotifications() {
+        if (
+            !medianBridgeReady ||
+            !window.median?.firebaseMessaging ||
+            fcmSetupStarted
+        ) {
+            return;
+        }
+
+        fcmSetupStarted = true;
+
+        const messaging = window.median.firebaseMessaging;
+
+        messaging.requestPermission({
+            callback: function (permission) {
+                if (!permission.granted) {
+                    console.log("Push permission not granted");
+                    fcmSetupStarted = false;
+                    return;
+                }
+
+                messaging.register({
+                    callback: function (registration) {
+                        console.log("FCM registration:", registration);
+
+                        messaging.subscribeToTopic({
+                            topic: "raavan_all_players",
+                            callback: function (result) {
+                                console.log(
+                                    "Player topic subscription:",
+                                    result.success
+                                );
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
     notificationBtn?.addEventListener("click", () => {
+        activatePushNotifications();
+
         notificationModal.style.display = "flex";
         renderPlayerNotifications();
     });
