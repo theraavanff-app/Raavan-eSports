@@ -66,7 +66,58 @@ function escapeHTML(value) {
         "'": "&#39;"
     })[char]);
 }
+function collectTeamRoster(teamFormat) {
+    const playerCount = {
+        Solo: 1,
+        Duo: 2,
+        Squad: 4
+    }[teamFormat] || 1;
 
+    const roster = [];
+
+    for (let i = 1; i <= playerCount; i++) {
+        const label = playerCount === 1
+            ? "Player"
+            : `Player ${i}`;
+
+        const ffUid = prompt(
+            `${label}: Enter Free Fire UID`
+        );
+
+        if (ffUid === null) return null;
+
+        const nickname = prompt(
+            `${label}: Enter Free Fire Nickname`
+        );
+
+        if (nickname === null) return null;
+
+        const cleanUid = ffUid.trim();
+        const cleanNickname = nickname.trim();
+
+        if (!cleanUid || !cleanNickname) {
+            alert("UID and Nickname both are required.");
+            return null;
+        }
+
+        if (cleanUid.length > 24 || cleanNickname.length > 30) {
+            alert("UID max 24 and Nickname max 30 characters.");
+            return null;
+        }
+
+        if (roster.some(player => player.ffUid === cleanUid)) {
+            alert("Each player must have a different Free Fire UID.");
+            return null;
+        }
+
+        roster.push({
+            ffUid: cleanUid,
+            nickname: cleanNickname
+        });
+    }
+
+    return roster;
+}
 function formatWalletDate(timestamp) {
     if (!timestamp || !timestamp.toDate) {
         return "Just now";
