@@ -488,14 +488,15 @@ document.getElementById("copyRoomPassword")
     const successToast = document.createElement("div");
 
     successToast.className = "join-success-toast";
-
     successToast.innerHTML = `
-        <div class="success-check">✓</div>
-        <div>
-            <strong>Successfully Joined!</strong>
-            <small>Your tournament spot is confirmed.</small>
-        </div>
-    `;
+    <div class="success-confetti">🎉 ✨ 🎊</div>
+    <div class="success-check">✓</div>
+    <div class="success-message">
+        <strong>TOURNAMENT JOINED!</strong>
+        <small>Your Team Spot is Confirmed</small>
+        <span>⚡ RAAVAN ESPORTS ⚡</span>
+    </div>
+`; 
 
     document.body.appendChild(successToast);
 
