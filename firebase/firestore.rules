@@ -159,7 +159,8 @@ function validPaidJoin(id, uid) {
       allow get: if isAdmin() ||
         (signedIn() && request.auth.uid == userId);
 
-      allow list: if signedIn() && request.auth.uid == userId;
+      allow list: if isAdmin() ||
+    (signedIn() && request.auth.uid == userId);
 
       allow create: if signedIn()
         && request.auth.uid == userId
