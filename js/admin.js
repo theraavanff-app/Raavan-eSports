@@ -624,8 +624,8 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
 
             const rosterHTML = team.roster.map((player, playerIndex) => `
                 <div class="joined-player-info">
-                    <h4>Player ${playerIndex + 1}: ${escapeHTML(player.nickname || "Not available")}</h4>
-                    <p>Free Fire UID: ${escapeHTML(player.ffUid || "Not available")}</p>
+                    <h4>${playerIndex === 0 ? "Player ID: " + escapeHTML(team.accountPlayerId) : "Player " + (playerIndex + 1) + ": " + escapeHTML(player.nickname || "Not available")}</h4>
+<p>Free Fire UID: ${escapeHTML(player.ffUid || "Not available")}</p>
                 </div>
             `).join("");
 
