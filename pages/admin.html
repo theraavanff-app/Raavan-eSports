@@ -243,6 +243,42 @@
                 <div id="adminWalletHistory">Loading history...</div>
             </div>
         </section>
+                <!-- NOTIFICATION MANAGEMENT -->
+        <section class="admin-section" id="notificationManagement">
+            <div class="section-heading">
+                <div class="section-icon">🔔</div>
+                <div>
+                    <h3>Send Notification</h3>
+                    <p>Send an announcement to all players</p>
+                </div>
+            </div>
+
+            <form id="notificationForm">
+                <label for="notificationTitle">Notification Title</label>
+                <input
+                    id="notificationTitle"
+                    type="text"
+                    maxlength="100"
+                    placeholder="e.g. New Tournament Available"
+                    required
+                >
+
+                <label for="notificationMessage">Message</label>
+                <textarea
+                    id="notificationMessage"
+                    maxlength="1000"
+                    rows="4"
+                    placeholder="Write your announcement..."
+                    required
+                ></textarea>
+
+                <button class="primary-btn" type="submit">
+                    SEND TO ALL PLAYERS <span>→</span>
+                </button>
+
+                <p id="notificationAdminMessage" class="admin-message"></p>
+            </form>
+        </section>
 
         <!-- CARD SETTINGS -->
         <section class="admin-section" id="cardSettings">
