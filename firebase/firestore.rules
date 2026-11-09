@@ -502,6 +502,40 @@ match /walletTransactions/{transactionId} {
 
   allow update, delete: if false;
 }
+    // APP NOTIFICATIONS
+    match /notifications/{notificationId} {
+      allow read: if signedIn();
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasAll([
+          'title', 'message', 'createdAt', 'createdBy'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 100
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 1000
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update, delete: if isAdmin();
+    }
+
+    // PLAYER NOTIFICATION READ STATUS
+    match /notificationReads/{readId} {
+      allow read: if signedIn()
+        && resource.data.uid == request.auth.uid;
+
+      allow create, update: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.notificationId is string
+        && readId == request.auth.uid + "_" +
+          request.resource.data.notificationId;
+
+      allow delete: if signedIn()
+        && resource.data.uid == request.auth.uid;
+    }
     // TOURNAMENT ROOM DETAILS
     match /tournamentRooms/{tournamentId} {
       allow get: if isAdmin() ||
