@@ -2464,3 +2464,25 @@
         font-size: 18px;
     }
 }
+.support-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 14px;
+    margin-bottom: 12px;
+    border: none;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #ed202b, #a9000a);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    text-decoration: none;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.support-btn:active {
+    transform: scale(.97);
+    filter: brightness(.9);
+}
