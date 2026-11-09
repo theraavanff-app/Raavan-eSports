@@ -2489,6 +2489,7 @@ roster,
         let fcmSetupStarted = false;
 
     function activatePushNotifications() {
+        alert("FCM TEST: Function started");
         const messaging = window.median?.firebaseMessaging;
 
         if (!messaging) {
