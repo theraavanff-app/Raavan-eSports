@@ -2226,7 +2226,10 @@ roster,
 
                 } catch (error) {
                     console.error("Joining error:", error);
-                    alert(error.message || "Joining failed.");
+                    alert(
+    "Error Code: " + (error.code || "unknown") +
+    "\nMessage: " + (error.message || "Joining failed.")
+);
 
                     const currentButton =
                         document.getElementById("joinTournament");
