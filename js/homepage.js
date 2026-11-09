@@ -1991,10 +1991,22 @@ function renderWallet() {
                 }
 
                 const joinButton =
-                    document.getElementById("joinTournament");
+    document.getElementById("joinTournament");
 
-                joinButton.disabled = true;
-                joinButton.textContent = "JOINING...";
+const teamFormat = ["Solo", "Duo", "Squad"].includes(item.category)
+    ? item.category
+    : (["Solo", "Duo", "Squad"].includes(item.teamFormat)
+        ? item.teamFormat
+        : "Solo");
+
+const roster = collectTeamRoster(teamFormat);
+
+if (!roster) {
+    return;
+}
+
+joinButton.disabled = true;
+joinButton.textContent = "JOINING...";
 
                 try {
                     const joinRef = doc(
@@ -2103,7 +2115,7 @@ function renderWallet() {
             });
         }
 
-        const newPlayers = currentPlayers + 1;
+        const newPlayers = currentPlayers + roster.length;
 
         transaction.set(joinRef, {
             uid: user.uid,
@@ -2113,6 +2125,8 @@ function renderWallet() {
             map: data.map || item.map,
             time: data.time || item.time,
             capacity: maxPlayers,
+            teamFormat,
+roster,
             createdAt: serverTimestamp()
         });
 
