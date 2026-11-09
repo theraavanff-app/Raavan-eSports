@@ -182,73 +182,86 @@ function validPaidJoin(id, uid) {
     }
 
     // TOURNAMENTS
-    match /tournaments/{tournamentId} {
-      allow read: if signedIn();
-      allow create, delete: if isAdmin();
+match /tournaments/{tournamentId} {
+  allow read: if signedIn();
+  allow create, delete: if isAdmin();
 
-      allow update: if isAdmin() || (
-        signedIn()
-        && resource.data.players is int
-        && resource.data.capacity is int
-        && resource.data.isActive != false
-        && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['players'])
-        && request.resource.data.players is int
-        && request.resource.data.players == resource.data.players + 1
-        && request.resource.data.players <= resource.data.capacity
-        && !exists(tournamentJoinPath(tournamentId, request.auth.uid))
-        && getAfter(tournamentJoinPath(tournamentId, request.auth.uid)).data.uid == request.auth.uid
-        && getAfter(tournamentJoinPath(tournamentId, request.auth.uid)).data.tournamentId == tournamentId
-      );
-    }
+  allow update: if isAdmin() || (
+    signedIn()
+    && resource.data.players is int
+    && resource.data.capacity is int
+    && resource.data.isActive != false
+    && request.resource.data.diff(resource.data)
+      .affectedKeys().hasOnly(['players'])
+    && request.resource.data.players is int
+    && getAfter(tournamentJoinPath(tournamentId, request.auth.uid)).data.uid == request.auth.uid
+    && getAfter(tournamentJoinPath(tournamentId, request.auth.uid)).data.tournamentId == tournamentId
+    && validJoinRoster(
+      getAfter(tournamentJoinPath(tournamentId, request.auth.uid)).data,
+      resource.data
+    )
+    && request.resource.data.players ==
+      resource.data.players +
+      getAfter(tournamentJoinPath(tournamentId, request.auth.uid)).data.roster.size()
+    && request.resource.data.players <= resource.data.capacity
+    && !exists(tournamentJoinPath(tournamentId, request.auth.uid))
+  );
+}
 
     // TOURNAMENT JOINS
-    match /tournamentJoins/{joinId} {
-      allow get: if isAdmin() ||
-        (signedIn() &&
-          (!exists(/databases/$(database)/documents/tournamentJoins/$(joinId))
-          || resource.data.uid == request.auth.uid));
+match /tournamentJoins/{joinId} {
+  allow get: if isAdmin() ||
+    (signedIn() &&
+      (!exists(/databases/$(database)/documents/tournamentJoins/$(joinId))
+      || resource.data.uid == request.auth.uid));
 
-      allow list: if isAdmin() ||
-        (signedIn() && resource.data.uid == request.auth.uid);
+  allow list: if isAdmin() ||
+    (signedIn() && resource.data.uid == request.auth.uid);
 
-      allow create: if signedIn()
-        && request.resource.data.uid == request.auth.uid
-        && joinId == request.resource.data.tournamentId + "_" + request.auth.uid
-        && request.resource.data.keys().hasAll([
-          'uid', 'tournamentId', 'tournamentName',
-          'category', 'map', 'time', 'capacity', 'createdAt'
-        ])
-        && request.resource.data.keys().hasOnly([
-          'uid', 'tournamentId', 'tournamentName',
-          'category', 'map', 'time', 'capacity', 'createdAt'
-        ])
-        && request.resource.data.tournamentId is string
-        && request.resource.data.tournamentName is string
-        && request.resource.data.category is string
-        && request.resource.data.map is string
-        && request.resource.data.time is string
-        && request.resource.data.capacity is int
-        && request.resource.data.capacity > 0
-        && request.resource.data.createdAt == request.time
-        && exists(tournamentPath(request.resource.data.tournamentId))
-        && get(tournamentPath(request.resource.data.tournamentId)).data.entryFees is int
-        && (
-          get(tournamentPath(request.resource.data.tournamentId)).data.entryFees == 0
-          || validPaidJoin(request.resource.data.tournamentId, request.auth.uid)
-        )
-        && get(tournamentPath(request.resource.data.tournamentId)).data.isActive != false
-        && get(tournamentPath(request.resource.data.tournamentId)).data.players is int
-        && get(tournamentPath(request.resource.data.tournamentId)).data.capacity is int
-        && request.resource.data.capacity ==
-          get(tournamentPath(request.resource.data.tournamentId)).data.capacity
-        && getAfter(tournamentPath(request.resource.data.tournamentId)).data.players ==
-          get(tournamentPath(request.resource.data.tournamentId)).data.players + 1
-        && getAfter(tournamentPath(request.resource.data.tournamentId)).data.players <=
-          request.resource.data.capacity;
+  allow create: if signedIn()
+    && request.resource.data.uid == request.auth.uid
+    && joinId == request.resource.data.tournamentId + "_" + request.auth.uid
+    && request.resource.data.keys().hasAll([
+      'uid', 'tournamentId', 'tournamentName',
+      'category', 'map', 'time', 'capacity',
+      'teamFormat', 'roster', 'createdAt'
+    ])
+    && request.resource.data.keys().hasOnly([
+      'uid', 'tournamentId', 'tournamentName',
+      'category', 'map', 'time', 'capacity',
+      'teamFormat', 'roster', 'createdAt'
+    ])
+    && request.resource.data.tournamentId is string
+    && request.resource.data.tournamentName is string
+    && request.resource.data.category is string
+    && request.resource.data.map is string
+    && request.resource.data.time is string
+    && request.resource.data.capacity is int
+    && request.resource.data.capacity > 0
+    && request.resource.data.createdAt == request.time
+    && exists(tournamentPath(request.resource.data.tournamentId))
+    && validJoinRoster(
+      request.resource.data,
+      get(tournamentPath(request.resource.data.tournamentId)).data
+    )
+    && get(tournamentPath(request.resource.data.tournamentId)).data.entryFees is int
+    && (
+      get(tournamentPath(request.resource.data.tournamentId)).data.entryFees == 0
+      || validPaidJoin(request.resource.data.tournamentId, request.auth.uid)
+    )
+    && get(tournamentPath(request.resource.data.tournamentId)).data.isActive != false
+    && get(tournamentPath(request.resource.data.tournamentId)).data.players is int
+    && get(tournamentPath(request.resource.data.tournamentId)).data.capacity is int
+    && request.resource.data.capacity ==
+      get(tournamentPath(request.resource.data.tournamentId)).data.capacity
+    && getAfter(tournamentPath(request.resource.data.tournamentId)).data.players ==
+      get(tournamentPath(request.resource.data.tournamentId)).data.players +
+      request.resource.data.roster.size()
+    && getAfter(tournamentPath(request.resource.data.tournamentId)).data.players <=
+      request.resource.data.capacity;
 
-      allow update, delete: if false;
-    }
+  allow update, delete: if false;
+}
 
     // BANNERS
     match /banners/{bannerId} {
