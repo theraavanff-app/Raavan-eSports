@@ -2512,6 +2512,7 @@ roster,
                 messaging.register({
                     callback: function (registration) {
                         console.log("FCM registration:", registration);
+                        alert("FCM registration callback received!");
 
                         messaging.getToken({
                             callback: function (tokenResult) {
