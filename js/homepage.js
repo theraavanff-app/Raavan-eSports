@@ -2525,7 +2525,9 @@ roster,
                                     return;
                                 }
 
+                               alert("TOPIC SUBSCRIPTION STARTED");
                                 messaging.subscribeToTopic({
+                                    alert("TOPIC CALLBACK: " + JSON.stringify(result));
                                     topic: "raavan_all_players",
                                     callback: function (result) {
                                         messaging.getSubscribedTopics({
