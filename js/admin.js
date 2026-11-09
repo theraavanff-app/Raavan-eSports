@@ -152,6 +152,13 @@ adminLogout.addEventListener("click", async () => {
 // =====================================
 // CREATE TOURNAMENT
 // =====================================
+const categorySelect = document.getElementById("tCategory");
+const teamFormatField = document.getElementById("teamFormatField");
+const teamFormatSelect = document.getElementById("tTeamFormat");
+
+categorySelect.addEventListener("change", () => {
+    teamFormatField.hidden = !["BR", "CS"].includes(categorySelect.value);
+});
 
 tournamentForm.addEventListener("submit", async e => {
 
@@ -165,6 +172,9 @@ tournamentForm.addEventListener("submit", async e => {
 
         const name = document.getElementById("tName").value.trim();
         const category = document.getElementById("tCategory").value;
+        const teamFormat = ["Solo", "Duo", "Squad"].includes(category)
+    ? category
+    : teamFormatSelect.value;
         const prizePool = document.getElementById("tPrize").value.trim();
         const perKillReward = document.getElementById("tPerKill").value.trim();
         const booyahPrize = document.getElementById("tBooyah").value.trim();
@@ -212,6 +222,7 @@ if (Number.isNaN(matchTimestamp.getTime())) {
         await addDoc(collection(db, "tournaments"), {
             name,
             category,
+            teamFormat,
             prizePool,
             perKillReward,
             booyahPrize,
@@ -226,6 +237,8 @@ if (Number.isNaN(matchTimestamp.getTime())) {
         });
 
         tournamentForm.reset();
+        teamFormatField.hidden = true;
+teamFormatSelect.value = "Solo";
         document.getElementById("tPlayers").value = 0;
 
         tournamentMessage.textContent =
