@@ -575,6 +575,7 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
 
                 const joinData = joinDoc.data();
                 let accountName = "Player";
+                let accountPlayerId = "Not assigned";
 
                 if (joinData.uid) {
                     const userSnapshot = await getDoc(
@@ -582,10 +583,12 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
                     );
 
                     if (userSnapshot.exists()) {
-                        accountName =
-                            userSnapshot.data().name || "Player";
+    accountName =
+        userSnapshot.data().name || "Player";
+
+    accountPlayerId =
+        userSnapshot.data().playerId || "Not assigned";
                     }
-                }
 
                 const roster = Array.isArray(joinData.roster)
                     ? joinData.roster
@@ -596,6 +599,7 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
 
                 return {
                     accountName,
+                    accountPlayerId
                     teamFormat: joinData.teamFormat || "Legacy",
                     roster
                 };
@@ -633,6 +637,7 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
                 <div class="joined-player-info">
                     <h4>Team ${teamIndex + 1} (${escapeHTML(team.teamFormat)})</h4>
                     <p>Joined Account: ${escapeHTML(team.accountName)}</p>
+                    <p>Player ID: ${escapeHTML(team.accountPlayerId)}</p>
                     ${rosterHTML}
                 </div>
             `;
@@ -1554,8 +1559,8 @@ bonusForm.addEventListener("submit", async e => {
 
     if (!adminVerified) return;
 
-    const uid =
-        document.getElementById("bonusUid").value.trim();
+    const playerId =
+    document.getElementById("bonusPlayerId").value.trim().toUpperCase();
 
     const amount =
         Number(document.getElementById("bonusAmount").value);
@@ -1564,7 +1569,7 @@ bonusForm.addEventListener("submit", async e => {
         document.getElementById("bonusNote").value.trim();
 
     if (
-        !uid ||
+        !playerId ||
         !Number.isSafeInteger(amount) ||
         amount < 1 ||
         amount > 100000
@@ -1579,13 +1584,22 @@ bonusForm.addEventListener("submit", async e => {
 
     try {
 
-        const userSnap = await getDoc(doc(db, "users", uid));
+        const playerQuery = query(
+    collection(db, "users"),
+    where("playerId", "==", playerId)
+);
 
-        if (!userSnap.exists()) {
-            throw new Error(
-                "Player profile not found. Check the UID."
-            );
-        }
+const playerSnapshot = await getDocs(playerQuery);
+
+if (playerSnapshot.empty) {
+    throw new Error("Player ID not found. Check the ID.");
+}
+
+if (playerSnapshot.size !== 1) {
+    throw new Error("Duplicate Player ID found. Contact support.");
+}
+
+const uid = playerSnapshot.docs[0].id;
 
         await runTransaction(db, async transaction => {
 
