@@ -192,8 +192,6 @@ function collectTeamRoster(teamFormat) {
     });
 }
 
-    return roster;
-}
 function formatWalletDate(timestamp) {
     if (!timestamp || !timestamp.toDate) {
         return "Just now";
