@@ -2502,6 +2502,7 @@ roster,
 
         messaging.requestPermission({
             callback: function (permission) {
+                alert("FCM permission callback: " + permission.granted);
                 if (!permission.granted) {
                     alert("Notification permission denied.");
                     fcmSetupStarted = false;
