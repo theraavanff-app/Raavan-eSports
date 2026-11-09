@@ -1011,12 +1011,10 @@ return {
     href="https://t.me/raavan_ff"
     target="_blank"
     rel="noopener noreferrer"
-    class="logout-btn"
-    style="display:block;text-align:center;text-decoration:none;margin-bottom:12px;"
+    class="support-btn"
 >
     🎧 HELP / SUPPORT
 </a>
-
                     <button id="logoutBtn" class="logout-btn">
                         LOG OUT
                     </button>
