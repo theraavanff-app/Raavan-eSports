@@ -2060,9 +2060,9 @@ joinButton.textContent = "JOINING...";
             throw new Error("Invalid tournament entry fee.");
         }
 
-        if (currentPlayers >= maxPlayers) {
-            throw new Error("Tournament is full.");
-        }
+        if (currentPlayers + roster.length > maxPlayers) {
+    throw new Error("Not enough player slots available for this team.");
+}
 
         const walletRef = doc(db, "wallets", user.uid);
         const historyRef = doc(
