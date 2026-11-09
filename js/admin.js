@@ -544,12 +544,8 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
     if (!adminVerified) return;
 
     joinedPlayersSection.hidden = false;
-
-    joinedTournamentTitle.textContent =
-        "Tournament: " + tournamentName;
-
+    joinedTournamentTitle.textContent = "Tournament: " + tournamentName;
     joinedTournamentTitle.dataset.id = tournamentId;
-
     joinedPlayersCount.textContent = "Loading...";
     joinedPlayersList.innerHTML = "<p>Loading players...</p>";
 
@@ -568,70 +564,80 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
         const joinSnapshot = await getDocs(joinsQuery);
 
         if (joinSnapshot.empty) {
-
             joinedPlayersCount.textContent = "Total Players: 0";
-
-            joinedPlayersList.innerHTML = `
-                <p class="no-joined-players">
-                    No players have joined this tournament yet.
-                </p>
-            `;
-
+            joinedPlayersList.innerHTML =
+                '<p class="no-joined-players">No players have joined this tournament yet.</p>';
             return;
         }
 
-        const players = await Promise.all(
+        const teams = await Promise.all(
             joinSnapshot.docs.map(async joinDoc => {
 
                 const joinData = joinDoc.data();
+                let accountName = "Player";
 
-                if (!joinData.uid) return null;
+                if (joinData.uid) {
+                    const userSnapshot = await getDoc(
+                        doc(db, "users", joinData.uid)
+                    );
 
-                const userSnapshot = await getDoc(
-                    doc(db, "users", joinData.uid)
-                );
-
-                if (!userSnapshot.exists()) {
-                    return {
-                        name: "Player",
-                        playerId: "Not available"
-                    };
+                    if (userSnapshot.exists()) {
+                        accountName =
+                            userSnapshot.data().name || "Player";
+                    }
                 }
 
-                const userData = userSnapshot.data();
+                const roster = Array.isArray(joinData.roster)
+                    ? joinData.roster
+                    : [{
+                        ffUid: "Not available",
+                        nickname: accountName
+                    }];
 
                 return {
-                    name: userData.name || "Player",
-                    playerId: userData.playerId || "Not available"
+                    accountName,
+                    teamFormat: joinData.teamFormat || "Legacy",
+                    roster
                 };
             })
         );
 
-        const validPlayers = players.filter(Boolean);
+        const totalPlayers = teams.reduce(
+            (total, team) => total + team.roster.length,
+            0
+        );
 
         joinedPlayersCount.textContent =
-            "Total Players: " + validPlayers.length;
+            "Total Teams: " + teams.length +
+            " | Total Players: " + totalPlayers;
 
         joinedPlayersList.innerHTML = "";
 
-        validPlayers.forEach((player, index) => {
+        teams.forEach((team, teamIndex) => {
 
-            const playerCard = document.createElement("div");
+            const teamCard = document.createElement("div");
+            teamCard.className = "joined-player-item";
 
-            playerCard.className = "joined-player-item";
+            const rosterHTML = team.roster.map((player, playerIndex) => `
+                <div class="joined-player-info">
+                    <h4>Player ${playerIndex + 1}: ${escapeHTML(player.nickname || "Not available")}</h4>
+                    <p>Free Fire UID: ${escapeHTML(player.ffUid || "Not available")}</p>
+                </div>
+            `).join("");
 
-            playerCard.innerHTML = `
+            teamCard.innerHTML = `
                 <div class="joined-player-number">
-                    ${index + 1}
+                    ${teamIndex + 1}
                 </div>
 
                 <div class="joined-player-info">
-                    <h4>${escapeHTML(player.name)}</h4>
-                    <p>Player ID: ${escapeHTML(player.playerId)}</p>
+                    <h4>Team ${teamIndex + 1} (${escapeHTML(team.teamFormat)})</h4>
+                    <p>Joined Account: ${escapeHTML(team.accountName)}</p>
+                    ${rosterHTML}
                 </div>
             `;
 
-            joinedPlayersList.appendChild(playerCard);
+            joinedPlayersList.appendChild(teamCard);
         });
 
     } catch (error) {
