@@ -2368,10 +2368,207 @@ roster,
             showPage("wallet");
         });
 
-    document.getElementById("notificationBtn")
-        ?.addEventListener("click", () => {
-            alert("No new notifications.");
+        // =================================
+    // PLAYER NOTIFICATION INBOX
+    // =================================
+
+    const notificationBtn =
+        document.getElementById("notificationBtn");
+
+    const notificationModal = document.createElement("div");
+    notificationModal.id = "playerNotificationModal";
+
+    notificationModal.style.cssText = `
+        position:fixed;
+        inset:0;
+        z-index:9999;
+        background:rgba(0,0,0,.88);
+        display:none;
+        align-items:center;
+        justify-content:center;
+        padding:15px;
+    `;
+
+    notificationModal.innerHTML = `
+        <div style="
+            width:100%;
+            max-width:430px;
+            max-height:80vh;
+            overflow-y:auto;
+            padding:20px;
+            border:1px solid #b98220;
+            border-radius:16px;
+            background:#151515;
+            color:white;
+        ">
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+            ">
+                <h2 style="color:#ffca55;margin:0">
+                    🔔 Notifications
+                </h2>
+                <button id="closePlayerNotifications"
+                    style="background:#333;color:white;border:0;
+                    padding:8px 13px;border-radius:8px;font-size:20px">
+                    ×
+                </button>
+            </div>
+
+            <div id="playerNotificationList" style="margin-top:18px">
+                Loading notifications...
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(notificationModal);
+
+    const notificationList =
+        notificationModal.querySelector("#playerNotificationList");
+
+    let playerNotifications = [];
+    let readNotificationIds = new Set();
+
+    function renderPlayerNotifications() {
+        const unreadCount = playerNotifications.filter(
+            item => !readNotificationIds.has(item.id)
+        ).length;
+
+        if (notificationBtn) {
+            notificationBtn.textContent =
+                unreadCount > 0 ? `♢ ${unreadCount}` : "♢";
+        }
+
+        if (playerNotifications.length === 0) {
+            notificationList.innerHTML = `
+                <p style="text-align:center;color:#aaa;padding:25px 0">
+                    No notifications yet.
+                </p>
+            `;
+            return;
+        }
+
+        notificationList.innerHTML = playerNotifications.map(item => {
+            const isRead = readNotificationIds.has(item.id);
+
+            const date = item.createdAt?.toDate
+                ? item.createdAt.toDate().toLocaleString()
+                : "Just now";
+
+            return `
+                <div data-notification-id="${escapeHTML(item.id)}"
+                    style="
+                        padding:14px;
+                        margin-bottom:12px;
+                        border:1px solid #493817;
+                        border-radius:12px;
+                        background:${isRead ? "#202020" : "#30230e"};
+                        cursor:pointer;
+                    ">
+                    <div style="display:flex;justify-content:space-between">
+                        <strong style="color:#ffca55">
+                            ${escapeHTML(item.title)}
+                        </strong>
+                        ${isRead ? "" : '<span style="color:#ffca55">●</span>'}
+                    </div>
+                    <p style="color:#ddd;font-size:13px;line-height:1.5">
+                        ${escapeHTML(item.message)}
+                    </p>
+                    <small style="color:#999">${escapeHTML(date)}</small>
+                </div>
+            `;
+        }).join("");
+    }
+
+    notificationBtn?.addEventListener("click", () => {
+        notificationModal.style.display = "flex";
+        renderPlayerNotifications();
+    });
+
+    notificationModal.querySelector(
+        "#closePlayerNotifications"
+    ).addEventListener("click", () => {
+        notificationModal.style.display = "none";
+    });
+
+    notificationModal.addEventListener("click", event => {
+        if (event.target === notificationModal) {
+            notificationModal.style.display = "none";
+        }
+    });
+
+    notificationList.addEventListener("click", async event => {
+        const item = event.target.closest("[data-notification-id]");
+        if (!item) return;
+
+        const notificationId = item.dataset.notificationId;
+        const user = auth.currentUser;
+
+        if (!user || readNotificationIds.has(notificationId)) return;
+
+        try {
+            await setDoc(
+                doc(
+                    db,
+                    "notificationReads",
+                    `${user.uid}_${notificationId}`
+                ),
+                {
+                    uid: user.uid,
+                    notificationId,
+                    readAt: serverTimestamp()
+                }
+            );
+
+            readNotificationIds.add(notificationId);
+            renderPlayerNotifications();
+
+        } catch (error) {
+            console.error("Notification read error:", error);
+        }
+    });
+
+    const notificationUser = auth.currentUser;
+
+    if (notificationUser) {
+        getDocs(query(
+            collection(db, "notificationReads"),
+            where("uid", "==", notificationUser.uid)
+        )).then(snapshot => {
+            snapshot.forEach(item => {
+                readNotificationIds.add(
+                    item.data().notificationId
+                );
+            });
+            renderPlayerNotifications();
+        }).catch(error => {
+            console.error("Read status error:", error);
         });
+    }
+
+    onSnapshot(
+        collection(db, "notifications"),
+        snapshot => {
+            playerNotifications = snapshot.docs.map(item => ({
+                id: item.id,
+                ...item.data()
+            }));
+
+            playerNotifications.sort((a, b) => {
+                const aTime = a.createdAt?.toMillis?.() || 0;
+                const bTime = b.createdAt?.toMillis?.() || 0;
+                return bTime - aTime;
+            });
+
+            renderPlayerNotifications();
+        },
+        error => {
+            console.error("Notification listener error:", error);
+            notificationList.textContent =
+                "Unable to load notifications.";
+        }
+    );
 
     document.querySelectorAll(".nav-btn").forEach(button => {
         button.addEventListener("click", () => {
