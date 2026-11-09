@@ -2526,32 +2526,31 @@ roster,
                                 }
 
                                alert("TOPIC SUBSCRIPTION STARTED");
-                                messaging.subscribeToTopic({
-                                    alert("TOPIC CALLBACK: " + JSON.stringify(result));
-                                    topic: "raavan_all_players",
-                                    callback: function (result) {
-                                        messaging.getSubscribedTopics({
-                                            callback: function (topicsResult) {
-                                                const topics =
-                                                    topicsResult.topics || [];
 
-                                                const subscribed =
-                                                    topics.includes("raavan_all_players");
+messaging.subscribeToTopic({
+    topic: "raavan_all_players",
+    callback: function (result) {
+        alert("TOPIC CALLBACK: " + JSON.stringify(result));
 
-                                                alert(
-                                                    "FCM DIAGNOSTIC\n\n" +
-                                                    "Token: GENERATED\n" +
-                                                    "Token preview: " +
-                                                    token.substring(0, 12) + "...\n\n" +
-                                                    "Topic subscription: " +
-                                                    (result.success ? "SUCCESS" : "FAILED") +
-                                                    "\nTopic verified: " +
-                                                    (subscribed ? "YES" : "NO")
-                                                );
-                                            }
-                                        });
-                                    }
-                                });
+        messaging.getSubscribedTopics({
+            callback: function (topicsResult) {
+                const topics = topicsResult.topics || [];
+
+                const subscribed =
+                    topics.includes("raavan_all_players");
+
+                alert(
+                    "FCM DIAGNOSTIC\n\n" +
+                    "Token: GENERATED\n" +
+                    "Topic subscription: " +
+                    (result.success ? "SUCCESS" : "FAILED") +
+                    "\nTopic verified: " +
+                    (subscribed ? "YES" : "NO")
+                );
+            }
+        });
+    }
+});
                             }
                         });
                     }
