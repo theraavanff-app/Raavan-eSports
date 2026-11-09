@@ -577,18 +577,19 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
                 let accountName = "Player";
                 let accountPlayerId = "Not assigned";
 
-                if (joinData.uid) {
+                                if (joinData.uid) {
                     const userSnapshot = await getDoc(
                         doc(db, "users", joinData.uid)
                     );
 
                     if (userSnapshot.exists()) {
-    accountName =
-        userSnapshot.data().name || "Player";
+                        accountName =
+                            userSnapshot.data().name || "Player";
 
-    accountPlayerId =
-        userSnapshot.data().playerId || "Not assigned";
+                        accountPlayerId =
+                            userSnapshot.data().playerId || "Not assigned";
                     }
+                }
 
                 const roster = Array.isArray(joinData.roster)
                     ? joinData.roster
@@ -599,7 +600,7 @@ async function loadJoinedPlayers(tournamentId, tournamentName) {
 
                 return {
                     accountName,
-                    accountPlayerId
+                    accountPlayerId,
                     teamFormat: joinData.teamFormat || "Legacy",
                     roster
                 };
