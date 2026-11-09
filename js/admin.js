@@ -1748,3 +1748,61 @@ refreshRequests.addEventListener("click", async () => {
         refreshRequests.disabled = false;
     }
 });
+// =====================================
+// SEND PLAYER NOTIFICATION
+// =====================================
+
+const notificationForm =
+    document.getElementById("notificationForm");
+
+const notificationAdminMessage =
+    document.getElementById("notificationAdminMessage");
+
+notificationForm?.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    if (!adminVerified || !auth.currentUser) return;
+
+    const title = document
+        .getElementById("notificationTitle")
+        .value.trim();
+
+    const message = document
+        .getElementById("notificationMessage")
+        .value.trim();
+
+    if (!title || !message) return;
+
+    const sendButton =
+        notificationForm.querySelector('button[type="submit"]');
+
+    sendButton.disabled = true;
+    sendButton.textContent = "SENDING...";
+
+    notificationAdminMessage.textContent =
+        "Sending notification...";
+
+    try {
+        await addDoc(collection(db, "notifications"), {
+            title,
+            message,
+            createdAt: serverTimestamp(),
+            createdBy: auth.currentUser.uid
+        });
+
+        notificationForm.reset();
+
+        notificationAdminMessage.textContent =
+            "Notification sent to all players successfully!";
+
+    } catch (error) {
+        console.error("Notification error:", error);
+
+        notificationAdminMessage.textContent =
+            error.message || "Unable to send notification.";
+    } finally {
+        sendButton.disabled = false;
+        sendButton.innerHTML =
+            'SEND TO ALL PLAYERS <span>→</span>';
+    }
+});
