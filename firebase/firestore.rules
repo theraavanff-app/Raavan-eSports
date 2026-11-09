@@ -48,36 +48,111 @@ service cloud.firestore {
   return /databases/$(database)/documents/walletTransactions/$(("tournament_entry_" + id + "_" + uid));
 }
 
-    function validPaidJoin(id, uid) {
-      let tournament = get(tournamentPath(id)).data;
-      let tournamentAfter = getAfter(tournamentPath(id)).data;
-      let wallet = get(walletPath(uid)).data;
-      let walletAfter = getAfter(walletPath(uid)).data;
-      let joinAfter = getAfter(tournamentJoinPath(id, uid)).data;
-      let historyAfter = getAfter(entryHistoryPath(id, uid)).data;
+    function validJoinRoster(joinData, tournamentData) {
+  let roster = joinData.roster;
+  let format = joinData.teamFormat;
+  let expectedFormat = ('teamFormat' in tournamentData)
+    ? tournamentData.teamFormat
+    : (tournamentData.category == 'Duo'
+        ? 'Duo'
+        : (tournamentData.category == 'Squad' ? 'Squad' : 'Solo'));
 
-      return tournament.entryFees is int
-        && tournament.entryFees > 0
-        && wallet.balance is int
-        && walletAfter.balance is int
-        && walletAfter.balance == wallet.balance - tournament.entryFees
-        && walletAfter.balance >= 0
-        && walletAfter.lastEntryTournamentId == id
-        && !exists(tournamentJoinPath(id, uid))
-        && existsAfter(tournamentJoinPath(id, uid))
-        && joinAfter.uid == uid
-        && joinAfter.tournamentId == id
-        && tournament.players is int
-        && tournament.capacity is int
-        && tournamentAfter.players == tournament.players + 1
-        && tournamentAfter.players <= tournament.capacity
-        && existsAfter(entryHistoryPath(id, uid))
-        && historyAfter.uid == uid
-        && historyAfter.amount == tournament.entryFees
-        && historyAfter.type == 'tournament_entry'
-        && historyAfter.tournamentId == id;
-    }
+  return format == expectedFormat
+    && roster is list
+    && (
+      (format == 'Solo' && roster.size() == 1)
+      || (format == 'Duo' && roster.size() == 2)
+      || (format == 'Squad' && roster.size() == 4)
+    )
+    && roster[0] is map
+    && roster[0].keys().hasAll(['ffUid', 'nickname'])
+    && roster[0].keys().hasOnly(['ffUid', 'nickname'])
+    && roster[0].ffUid is string
+    && roster[0].ffUid.size() > 0
+    && roster[0].ffUid.size() <= 24
+    && roster[0].nickname is string
+    && roster[0].nickname.size() > 0
+    && roster[0].nickname.size() <= 30
+    && (
+      roster.size() == 1
+      || (
+        roster[1] is map
+        && roster[1].keys().hasAll(['ffUid', 'nickname'])
+        && roster[1].keys().hasOnly(['ffUid', 'nickname'])
+        && roster[1].ffUid is string
+        && roster[1].ffUid.size() > 0
+        && roster[1].ffUid.size() <= 24
+        && roster[1].nickname is string
+        && roster[1].nickname.size() > 0
+        && roster[1].nickname.size() <= 30
+        && roster[1].ffUid != roster[0].ffUid
+      )
+    )
+    && (
+      roster.size() < 3
+      || (
+        roster[2] is map
+        && roster[2].keys().hasAll(['ffUid', 'nickname'])
+        && roster[2].keys().hasOnly(['ffUid', 'nickname'])
+        && roster[2].ffUid is string
+        && roster[2].ffUid.size() > 0
+        && roster[2].ffUid.size() <= 24
+        && roster[2].nickname is string
+        && roster[2].nickname.size() > 0
+        && roster[2].nickname.size() <= 30
+        && roster[2].ffUid != roster[0].ffUid
+        && roster[2].ffUid != roster[1].ffUid
+      )
+    )
+    && (
+      roster.size() < 4
+      || (
+        roster[3] is map
+        && roster[3].keys().hasAll(['ffUid', 'nickname'])
+        && roster[3].keys().hasOnly(['ffUid', 'nickname'])
+        && roster[3].ffUid is string
+        && roster[3].ffUid.size() > 0
+        && roster[3].ffUid.size() <= 24
+        && roster[3].nickname is string
+        && roster[3].nickname.size() > 0
+        && roster[3].nickname.size() <= 30
+        && roster[3].ffUid != roster[0].ffUid
+        && roster[3].ffUid != roster[1].ffUid
+        && roster[3].ffUid != roster[2].ffUid
+      )
+    );
+}
 
+function validPaidJoin(id, uid) {
+  let tournament = get(tournamentPath(id)).data;
+  let tournamentAfter = getAfter(tournamentPath(id)).data;
+  let wallet = get(walletPath(uid)).data;
+  let walletAfter = getAfter(walletPath(uid)).data;
+  let joinAfter = getAfter(tournamentJoinPath(id, uid)).data;
+  let historyAfter = getAfter(entryHistoryPath(id, uid)).data;
+
+  return tournament.entryFees is int
+    && tournament.entryFees > 0
+    && wallet.balance is int
+    && walletAfter.balance is int
+    && walletAfter.balance == wallet.balance - tournament.entryFees
+    && walletAfter.balance >= 0
+    && walletAfter.lastEntryTournamentId == id
+    && !exists(tournamentJoinPath(id, uid))
+    && existsAfter(tournamentJoinPath(id, uid))
+    && joinAfter.uid == uid
+    && joinAfter.tournamentId == id
+    && validJoinRoster(joinAfter, tournament)
+    && tournament.players is int
+    && tournament.capacity is int
+    && tournamentAfter.players == tournament.players + joinAfter.roster.size()
+    && tournamentAfter.players <= tournament.capacity
+    && existsAfter(entryHistoryPath(id, uid))
+    && historyAfter.uid == uid
+    && historyAfter.amount == tournament.entryFees
+    && historyAfter.type == 'tournament_entry'
+    && historyAfter.tournamentId == id;
+}
     // USER PROFILES
     match /users/{userId} {
       allow get: if isAdmin() ||
