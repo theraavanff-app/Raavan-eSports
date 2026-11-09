@@ -61,16 +61,25 @@
                     </div>
 
                     <div class="form-field">
-                        <label for="tCategory">Category</label>
-                        <select id="tCategory" required>
-                            <option value="">Select Category</option>
-                            <option value="Solo">Solo</option>
-                            <option value="Duo">Duo</option>
-                            <option value="Squad">Squad</option>
-                            <option value="BR">BR</option>
-                            <option value="CS">CS</option>
-                        </select>
-                    </div>
+    <label for="tCategory">Category</label>
+    <select id="tCategory" required>
+        <option value="">Select Category</option>
+        <option value="Solo">Solo</option>
+        <option value="Duo">Duo</option>
+        <option value="Squad">Squad</option>
+        <option value="BR">BR</option>
+        <option value="CS">CS</option>
+    </select>
+</div>
+
+<div class="form-field" id="teamFormatField" hidden>
+    <label for="tTeamFormat">Team Format</label>
+    <select id="tTeamFormat">
+        <option value="Solo">Solo (1 Player)</option>
+        <option value="Duo">Duo (2 Players)</option>
+        <option value="Squad">Squad (4 Players)</option>
+    </select>
+</div>
 
                     <div class="form-field">
                         <label for="tMap">Map Name</label>
