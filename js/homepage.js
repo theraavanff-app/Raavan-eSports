@@ -66,55 +66,131 @@ function escapeHTML(value) {
         "'": "&#39;"
     })[char]);
 }
+
 function collectTeamRoster(teamFormat) {
-    const playerCount = {
-        Solo: 1,
-        Duo: 2,
-        Squad: 4
-    }[teamFormat] || 1;
+    return new Promise(resolve => {
+        const playerCount = {
+            Solo: 1,
+            Duo: 2,
+            Squad: 4
+        }[teamFormat] || 1;
 
-    const roster = [];
+        const overlay = document.createElement("div");
+        overlay.className = "team-join-overlay";
 
-    for (let i = 1; i <= playerCount; i++) {
-        const label = playerCount === 1
-            ? "Player"
-            : `Player ${i}`;
+        let playerFields = "";
 
-        const ffUid = prompt(
-            `${label}: Enter Free Fire UID`
-        );
+        for (let i = 1; i <= playerCount; i++) {
+            playerFields += `
+                <div class="team-player-card">
+                    <div class="team-player-heading">
+                        <span>PLAYER ${i}</span>
+                        <b>👤</b>
+                    </div>
 
-        if (ffUid === null) return null;
+                    <label>FREE FIRE UID</label>
+                    <input
+                        type="text"
+                        class="team-uid"
+                        maxlength="24"
+                        placeholder="Enter Player ${i} UID"
+                        required
+                    >
 
-        const nickname = prompt(
-            `${label}: Enter Free Fire Nickname`
-        );
-
-        if (nickname === null) return null;
-
-        const cleanUid = ffUid.trim();
-        const cleanNickname = nickname.trim();
-
-        if (!cleanUid || !cleanNickname) {
-            alert("UID and Nickname both are required.");
-            return null;
+                    <label>FREE FIRE NICKNAME</label>
+                    <input
+                        type="text"
+                        class="team-nickname"
+                        maxlength="30"
+                        placeholder="Enter Player ${i} Nickname"
+                        required
+                    >
+                </div>
+            `;
         }
 
-        if (cleanUid.length > 24 || cleanNickname.length > 30) {
-            alert("UID max 24 and Nickname max 30 characters.");
-            return null;
-        }
+        overlay.innerHTML = `
+            <div class="team-join-box">
+                <div class="team-join-top">
+                    <span>⚡ RAAVAN ESPORTS</span>
+                    <button type="button" class="team-join-close">×</button>
+                </div>
 
-        if (roster.some(player => player.ffUid === cleanUid)) {
-            alert("Each player must have a different Free Fire UID.");
-            return null;
-        }
+                <div class="team-join-icon">🏆</div>
+                <h2>REGISTER YOUR TEAM</h2>
+                <p class="team-join-subtitle">
+                    Enter all players' Free Fire details
+                </p>
 
-        roster.push({
-            ffUid: cleanUid,
-            nickname: cleanNickname
-        });
-    }
+                <div class="team-format-badge">
+                    ${teamFormat.toUpperCase()} MATCH • ${playerCount} PLAYER${playerCount > 1 ? "S" : ""}
+                </div>
+
+                <form class="team-join-form">
+                    ${playerFields}
+
+                    <p class="team-join-error"></p>
+
+                    <button type="submit" class="team-confirm-btn">
+                        CONFIRM JOIN →
+                    </button>
+
+                    <button type="button" class="team-cancel-btn">
+                        CANCEL
+                    </button>
+                </form>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const closePopup = (result = null) => {
+            overlay.remove();
+            resolve(result);
+        };
+
+        overlay.querySelector(".team-join-close").onclick =
+            () => closePopup();
+
+        overlay.querySelector(".team-cancel-btn").onclick =
+            () => closePopup();
+
+        overlay.querySelector(".team-join-form").onsubmit = event => {
+            event.preventDefault();
+
+            const uids = [...overlay.querySelectorAll(".team-uid")];
+            const names = [...overlay.querySelectorAll(".team-nickname")];
+
+            const roster = uids.map((input, index) => ({
+                ffUid: input.value.trim(),
+                nickname: names[index].value.trim()
+            }));
+
+            const error = overlay.querySelector(".team-join-error");
+
+            if (roster.some(p => !p.ffUid || !p.nickname)) {
+                error.textContent = "Please fill all player details.";
+                return;
+            }
+
+            if (roster.some(p =>
+                !/^\d+$/.test(p.ffUid)
+            )) {
+                error.textContent = "Free Fire UID must contain numbers only.";
+                return;
+            }
+
+            if (new Set(roster.map(p => p.ffUid)).size !== roster.length) {
+                error.textContent = "Each player must have a different UID.";
+                return;
+            }
+
+            closePopup(roster);
+        };
+
+        overlay.querySelector(".team-uid").focus();
+    });
+}
 
     return roster;
 }
@@ -2000,7 +2076,7 @@ const teamFormat = ["Solo", "Duo", "Squad"].includes(item.category)
         ? item.teamFormat
         : "Solo");
 
-const roster = collectTeamRoster(teamFormat);
+const roster = await collectTeamRoster(teamFormat);
 
 if (!roster) {
     return;
