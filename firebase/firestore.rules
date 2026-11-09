@@ -307,10 +307,6 @@ match /tournamentJoins/{joinId} {
           .affectedKeys().hasOnly([
             'balance', 'updatedAt', 'lastEntryTournamentId'
           ])
-        && request.resource.data.diff(resource.data)
-          .affectedKeys().hasAll([
-            'balance', 'updatedAt', 'lastEntryTournamentId'
-          ])
         && resource.data.balance is int
         && request.resource.data.balance is int
         && request.resource.data.balance >= 0
