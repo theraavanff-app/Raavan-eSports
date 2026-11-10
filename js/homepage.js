@@ -2555,7 +2555,7 @@ if (currentUser) {
 
             const playerTopic = "raavan_player_" +
                 playerId.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
-
+alert("SUBSCRIBING TO PLAYER TOPIC: " + playerTopic);
             messaging.subscribeToTopic(
                 playerTopic,
                 result => {
