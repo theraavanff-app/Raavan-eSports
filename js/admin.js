@@ -1749,7 +1749,7 @@ refreshRequests.addEventListener("click", async () => {
     }
 });
 // =====================================
-// SEND PLAYER NOTIFICATION
+// SEND PLAYER PUSH NOTIFICATION
 // =====================================
 
 const notificationForm =
@@ -1780,9 +1780,31 @@ notificationForm?.addEventListener("submit", async e => {
     sendButton.textContent = "SENDING...";
 
     notificationAdminMessage.textContent =
-        "Sending notification...";
+        "Sending push notification...";
 
     try {
+        const idToken = await auth.currentUser.getIdToken();
+
+        const response = await fetch(
+            "https://raavan-fcmm.the-raavanff.workers.dev/",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${idToken}`
+                },
+                body: JSON.stringify({ title, message })
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(
+                result.error || "Push notification failed"
+            );
+        }
+
         await addDoc(collection(db, "notifications"), {
             title,
             message,
@@ -1793,10 +1815,10 @@ notificationForm?.addEventListener("submit", async e => {
         notificationForm.reset();
 
         notificationAdminMessage.textContent =
-            "Notification sent to all players successfully!";
+            "Push notification sent to all players successfully!";
 
     } catch (error) {
-        console.error("Notification error:", error);
+        console.error("Push notification error:", error);
 
         notificationAdminMessage.textContent =
             error.message || "Unable to send notification.";
