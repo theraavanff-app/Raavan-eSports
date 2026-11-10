@@ -2527,30 +2527,45 @@ roster,
 
                                alert("TOPIC SUBSCRIPTION STARTED");
 
-messaging.subscribeToTopic({
+alert("TOPIC SUBSCRIPTION STARTED");
+
+let topicResultHandled = false;
+
+function handleTopicResult(result) {
+    if (topicResultHandled) return;
+    topicResultHandled = true;
+
+    alert("TOPIC CALLBACK: " + JSON.stringify(result));
+
+    messaging.getSubscribedTopics({
+        callback: function (topicsResult) {
+            const topics = topicsResult.topics || [];
+            const subscribed = topics.includes("raavan_all_players");
+
+            alert(
+                "FCM DIAGNOSTIC\n\n" +
+                "Token: GENERATED\n" +
+                "Topic subscription: " +
+                (result.success ? "SUCCESS" : "FAILED") +
+                "\nTopic verified: " +
+                (subscribed ? "YES" : "NO")
+            );
+        }
+    });
+}
+
+const topicRequest = messaging.subscribeToTopic({
     topic: "raavan_all_players",
-    callback: function (result) {
-        alert("TOPIC CALLBACK: " + JSON.stringify(result));
-
-        messaging.getSubscribedTopics({
-            callback: function (topicsResult) {
-                const topics = topicsResult.topics || [];
-
-                const subscribed =
-                    topics.includes("raavan_all_players");
-
-                alert(
-                    "FCM DIAGNOSTIC\n\n" +
-                    "Token: GENERATED\n" +
-                    "Topic subscription: " +
-                    (result.success ? "SUCCESS" : "FAILED") +
-                    "\nTopic verified: " +
-                    (subscribed ? "YES" : "NO")
-                );
-            }
-        });
-    }
+    callback: handleTopicResult
 });
+
+if (topicRequest && typeof topicRequest.then === "function") {
+    topicRequest
+        .then(handleTopicResult)
+        .catch(function (error) {
+            alert("TOPIC ERROR: " + error);
+        });
+}
                             }
                         });
                     }
