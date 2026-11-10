@@ -2222,6 +2222,7 @@ roster,
 
                     item.players = updatedPlayers;
                     joinedTournaments.add(String(id));
+                    subscribeToTournamentTopic(String(id));
 
                     renderTournaments(
                         document.querySelector(".category-btn.active")
@@ -2486,7 +2487,21 @@ roster,
     // =================================
 
     let medianBridgeReady = false;
-        let fcmSetupStarted = false;
+let fcmSetupStarted = false;
+let registeredMessaging = null;
+
+function subscribeToTournamentTopic(tournamentId) {
+    if (!registeredMessaging || !tournamentId) return;
+
+    const topic = "raavan_tournament_" + String(tournamentId);
+
+    registeredMessaging.subscribeToTopic(
+        topic,
+        result => {
+            console.log("Tournament topic subscription:", topic, result);
+        }
+    );
+}
 
     function activatePushNotifications() {
         alert("FCM TEST: Function started");
@@ -2524,7 +2539,11 @@ roster,
                                     fcmSetupStarted = false;
                                     return;
                                 }
+registeredMessaging = messaging;
 
+joinedTournaments.forEach(tournamentId => {
+    subscribeToTournamentTopic(tournamentId);
+});
 alert("TOPIC SUBSCRIPTION STARTED");
 
 let topicResultHandled = false;
