@@ -253,7 +253,11 @@ async function loadTournaments() {
             id: item.id,
             ...item.data()
         }))
-        .filter(item => item.isActive !== false);
+        .filter(item => item.isActive !== false)
+.sort((a, b) =>
+    (b.createdAt?.toMillis?.() || 0) -
+    (a.createdAt?.toMillis?.() || 0)
+);
 }
 
 async function loadJoinedTournaments() {
@@ -315,7 +319,11 @@ function listenToTournaments(renderTournaments) {
                     id: item.id,
                     ...item.data()
                 }))
-                .filter(item => item.isActive !== false);
+                .filter(item => item.isActive !== false)
+.sort((a, b) =>
+    (b.createdAt?.toMillis?.() || 0) -
+    (a.createdAt?.toMillis?.() || 0)
+);
 
             const category =
                 document.querySelector(".category-btn.active")
