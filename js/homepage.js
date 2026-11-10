@@ -2563,7 +2563,7 @@ if (topicRequest && typeof topicRequest.then === "function") {
     topicRequest
         .then(handleTopicResult)
         .catch(function (error) {
-            alert("TOPIC ERROR: " + error);
+            alert("TOPIC ERROR: " + JSON.stringify(error));
         });
 }
                             }
