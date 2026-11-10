@@ -2540,6 +2540,35 @@ function subscribeToTournamentTopic(tournamentId) {
                                     return;
                                 }
 registeredMessaging = messaging;
+                                const currentUser = auth.currentUser;
+
+if (currentUser) {
+    getDoc(doc(db, "users", currentUser.uid))
+        .then(userSnap => {
+            if (!userSnap.exists()) return;
+
+            const playerId = userSnap.data().playerId;
+
+            if (!playerId) return;
+
+            const playerTopic = "raavan_player_" +
+                playerId.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+
+            messaging.subscribeToTopic(
+                playerTopic,
+                result => {
+                    console.log(
+                        "Player topic subscription:",
+                        playerTopic,
+                        result
+                    );
+                }
+            );
+        })
+        .catch(error => {
+            console.error("Player topic error:", error);
+        });
+}
 
 joinedTournaments.forEach(tournamentId => {
     subscribeToTournamentTopic(tournamentId);
