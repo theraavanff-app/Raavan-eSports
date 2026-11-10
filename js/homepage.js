@@ -2549,6 +2549,7 @@ if (currentUser) {
             if (!userSnap.exists()) return;
 
             const playerId = userSnap.data().playerId;
+            alert("FIRESTORE PLAYER ID: " + playerId);
 
             if (!playerId) return;
 
