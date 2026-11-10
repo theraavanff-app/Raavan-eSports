@@ -2556,17 +2556,27 @@ if (currentUser) {
             const playerTopic = "raavan_player_" +
                 playerId.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
 alert("SUBSCRIBING TO PLAYER TOPIC: " + playerTopic);
-            messaging.subscribeToTopic(
-                playerTopic,
-                result => {
-                    console.log(
-                        "Player topic subscription:",
-                        playerTopic,
-                        result
-                    );
-                    alert("PLAYER TOPIC: " + playerTopic + " | " + JSON.stringify(result));
-                }
-            );
+            let playerTopicHandled = false;
+
+function handlePlayerTopicResult(result) {
+    if (playerTopicHandled) return;
+    playerTopicHandled = true;
+
+    alert("PLAYER TOPIC RESULT: " + JSON.stringify(result));
+}
+
+const playerTopicRequest = messaging.subscribeToTopic(
+    playerTopic,
+    handlePlayerTopicResult
+);
+
+if (playerTopicRequest && typeof playerTopicRequest.then === "function") {
+    playerTopicRequest
+        .then(handlePlayerTopicResult)
+        .catch(error => {
+            alert("PLAYER TOPIC ERROR: " + JSON.stringify(error));
+        });
+}
         })
         .catch(error => {
             console.error("Player topic error:", error);
