@@ -2562,6 +2562,7 @@ if (currentUser) {
                         playerTopic,
                         result
                     );
+                    alert("PLAYER TOPIC: " + playerTopic + " | " + JSON.stringify(result));
                 }
             );
         })
