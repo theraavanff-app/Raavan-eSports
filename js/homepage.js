@@ -2541,6 +2541,7 @@ function subscribeToTournamentTopic(tournamentId) {
                                 }
 registeredMessaging = messaging;
                                 const currentUser = auth.currentUser;
+                                alert("CURRENT USER: " + (currentUser ? currentUser.uid : "NOT FOUND"));
 
 if (currentUser) {
     getDoc(doc(db, "users", currentUser.uid))
