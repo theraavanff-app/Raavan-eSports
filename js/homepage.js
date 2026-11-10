@@ -2552,10 +2552,10 @@ function handleTopicResult(result) {
     });
 }
 
-const topicRequest = messaging.subscribeToTopic({
-    topic: "raavan_all_players",
-    callback: handleTopicResult
-});
+const topicRequest = messaging.subscribeToTopic(
+    "raavan_all_players",
+    handleTopicResult
+);
 
 if (topicRequest && typeof topicRequest.then === "function") {
     topicRequest
