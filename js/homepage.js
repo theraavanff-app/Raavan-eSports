@@ -2511,135 +2511,106 @@ function subscribeToTournamentTopic(tournamentId) {
     );
 }
 
-    function activatePushNotifications() {
-        alert("FCM TEST: Function started");
-        const messaging = window.median?.firebaseMessaging;
+    
+function activatePushNotifications() {
+    const messaging = window.median?.firebaseMessaging;
 
-        if (!messaging) {
-            alert("ERROR: Median FCM bridge not available. Rebuild app and check plugin.");
-            return;
-        }
+    if (!messaging) {
+        console.error("Median FCM bridge not available.");
+        return;
+    }
 
-        if (fcmSetupStarted) return;
-        fcmSetupStarted = true;
+    if (fcmSetupStarted) return;
+    fcmSetupStarted = true;
 
-        messaging.requestPermission({
-            callback: function (permission) {
-                alert("FCM permission callback: " + permission.granted);
-                if (!permission.granted) {
-                    alert("Notification permission denied.");
-                    fcmSetupStarted = false;
-                    return;
+    messaging.requestPermission({
+        callback: function (permission) {
+            if (!permission.granted) {
+                console.warn("Notification permission denied.");
+                fcmSetupStarted = false;
+                return;
+            }
+
+            messaging.register({
+                callback: function (registration) {
+                    console.log("FCM registration:", registration);
+
+                    messaging.getToken({
+                        callback: function (tokenResult) {
+                            const token = tokenResult.token;
+
+                            if (!token) {
+                                console.error("FCM token not generated.");
+                                fcmSetupStarted = false;
+                                return;
+                            }
+
+                            registeredMessaging = messaging;
+                            const currentUser = auth.currentUser;
+
+                            if (currentUser) {
+                                getDoc(doc(db, "users", currentUser.uid))
+                                    .then(userSnap => {
+                                        if (!userSnap.exists()) return;
+
+                                        const playerId = userSnap.data().playerId;
+                                        if (!playerId) return;
+
+                                        const playerTopic = "raavan_player_" +
+                                            playerId.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+
+                                        let handled = false;
+
+                                        function handlePlayerTopicResult(result) {
+                                            if (handled) return;
+                                            handled = true;
+                                            console.log("Player topic result:", result);
+                                        }
+
+                                        const request = messaging.subscribeToTopic(
+                                            playerTopic,
+                                            handlePlayerTopicResult
+                                        );
+
+                                        if (request && typeof request.then === "function") {
+                                            request
+                                                .then(handlePlayerTopicResult)
+                                                .catch(error => console.error("Player topic error:", error));
+                                        }
+                                    })
+                                    .catch(error => console.error("Player topic error:", error));
+                            }
+
+                            joinedTournaments.forEach(tournamentId => {
+                                subscribeToTournamentTopic(tournamentId);
+                            });
+
+                            let topicHandled = false;
+
+                            function handleTopicResult(result) {
+                                if (topicHandled) return;
+                                topicHandled = true;
+                                console.log("All players topic result:", result);
+                            }
+
+                            const topicRequest = messaging.subscribeToTopic(
+                                "raavan_all_players",
+                                handleTopicResult
+                            );
+
+                            if (topicRequest && typeof topicRequest.then === "function") {
+                                topicRequest
+                                    .then(handleTopicResult)
+                                    .catch(error => console.error("All players topic error:", error));
+                            }
+                        }
+                    });
                 }
-
-                messaging.register({
-                    callback: function (registration) {
-                        console.log("FCM registration:", registration);
-                        alert("FCM registration callback received!");
-
-                        messaging.getToken({
-                            callback: function (tokenResult) {
-                                const token = tokenResult.token;
-                                alert(token ? "FCM TOKEN GENERATED SUCCESSFULLY" : "FCM TOKEN NOT GENERATED");
-
-                                if (!token) {
-                                    alert("ERROR: FCM token not generated.");
-                                    fcmSetupStarted = false;
-                                    return;
-                                }
-registeredMessaging = messaging;
-                                const currentUser = auth.currentUser;
-                                alert("CURRENT USER: " + (currentUser ? currentUser.uid : "NOT FOUND"));
-
-if (currentUser) {
-    getDoc(doc(db, "users", currentUser.uid))
-        .then(userSnap => {
-            if (!userSnap.exists()) return;
-
-            const playerId = userSnap.data().playerId;
-            alert("FIRESTORE PLAYER ID: " + playerId);
-
-            if (!playerId) return;
-
-            const playerTopic = "raavan_player_" +
-                playerId.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
-alert("SUBSCRIBING TO PLAYER TOPIC: " + playerTopic);
-            let playerTopicHandled = false;
-
-function handlePlayerTopicResult(result) {
-    if (playerTopicHandled) return;
-    playerTopicHandled = true;
-
-    alert("PLAYER TOPIC RESULT: " + JSON.stringify(result));
-}
-
-const playerTopicRequest = messaging.subscribeToTopic(
-    playerTopic,
-    handlePlayerTopicResult
-);
-
-if (playerTopicRequest && typeof playerTopicRequest.then === "function") {
-    playerTopicRequest
-        .then(handlePlayerTopicResult)
-        .catch(error => {
-            alert("PLAYER TOPIC ERROR: " + JSON.stringify(error));
-        });
-}
-        })
-        .catch(error => {
-            console.error("Player topic error:", error);
-        });
-}
-
-joinedTournaments.forEach(tournamentId => {
-    subscribeToTournamentTopic(tournamentId);
-});
-alert("TOPIC SUBSCRIPTION STARTED");
-
-let topicResultHandled = false;
-
-function handleTopicResult(result) {
-    if (topicResultHandled) return;
-    topicResultHandled = true;
-
-    alert("TOPIC CALLBACK: " + JSON.stringify(result));
-
-    messaging.getSubscribedTopics({
-        callback: function (topicsResult) {
-            const topics = topicsResult.topics || [];
-            const subscribed = topics.includes("raavan_all_players");
-
-            alert(
-                "FCM DIAGNOSTIC\n\n" +
-                "Token: GENERATED\n" +
-                "Topic subscription: " +
-                (result.success ? "SUCCESS" : "FAILED") +
-                "\nTopic verified: " +
-                (subscribed ? "YES" : "NO")
-            );
+            });
         }
     });
 }
 
-const topicRequest = messaging.subscribeToTopic(
-    "raavan_all_players",
-    handleTopicResult
-);
-
-if (topicRequest && typeof topicRequest.then === "function") {
-    topicRequest
-        .then(handleTopicResult)
-        .catch(function (error) {
-            alert("TOPIC ERROR: " + JSON.stringify(error));
-        });
-}
-                            }
-                        });
-                    }
-                });
-            }
-        });
-    }
 
     notificationBtn?.addEventListener("click", () => {
         activatePushNotifications();
