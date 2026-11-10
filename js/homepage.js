@@ -2525,8 +2525,6 @@ roster,
                                     return;
                                 }
 
-                               alert("TOPIC SUBSCRIPTION STARTED");
-
 alert("TOPIC SUBSCRIPTION STARTED");
 
 let topicResultHandled = false;
