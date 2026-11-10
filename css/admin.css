@@ -997,3 +997,29 @@ button {
     text-align: center;
     overflow-wrap: anywhere;
     }
+/* WALLET ADMIN LIST SCROLL */
+
+#coinRequestsList,
+#withdrawalRequestsList,
+#adminWalletHistory {
+    max-height: 320px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 6px;
+}
+
+/* Visible scrollbar */
+#coinRequestsList::-webkit-scrollbar,
+#withdrawalRequestsList::-webkit-scrollbar,
+#adminWalletHistory::-webkit-scrollbar {
+    width: 5px;
+}
+
+#coinRequestsList::-webkit-scrollbar-thumb,
+#withdrawalRequestsList::-webkit-scrollbar-thumb,
+#adminWalletHistory::-webkit-scrollbar-thumb {
+    background: #b58b3b;
+    border-radius: 10px;
+}
