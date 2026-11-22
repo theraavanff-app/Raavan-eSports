@@ -199,9 +199,7 @@ jobs:
                           ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
                   FrameLayout adContainer = new FrameLayout(this);
-                  int gap = (int) (10 * 
-                  getResources().getDisplayMetrics().d
-                  ensity + 0.5f);
+                  int gap = (int) (10 * getResources().getDisplayMetrics().density + 0.5f);
                   adContainer.setPadding(0, gap, 0, 0);
                   layout.addView(adContainer,
                       new LinearLayout.LayoutParams(
