@@ -53,14 +53,12 @@ jobs:
           cat > build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application") version "8.7.3" apply false
-              id("org.jetbrains.kotlin.android") version "2.0.21" apply false
           }
           EOF
 
           cat > app/build.gradle.kts <<'EOF'
           plugins {
               id("com.android.application")
-              id("org.jetbrains.kotlin.android")
           }
 
           android {
@@ -77,196 +75,161 @@ jobs:
           }
 
           dependencies {
-              implementation("com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk:1.7.0")
+              implementation("com.google.android.gms:play-services-ads:25.5.0")
           }
           EOF
 
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
               <application
                   android:allowBackup="true"
                   android:label="RAAVAN ESPORTS"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar"
-                  android:usesCleartextTraffic="false">
+                  android:hardwareAccelerated="true">
+
+                  <meta-data
+                      android:name="com.google.android.gms.ads.APPLICATION_ID"
+                      android:value="ca-app-pub-4249303837052016~3743934650"/>
 
                   <activity
                       android:name=".MainActivity"
-                      android:exported="true"
-                      android:screenOrientation="unspecified">
+                      android:exported="true">
 
                       <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
                       </intent-filter>
+
                   </activity>
               </application>
           </manifest>
           EOF
 
-          cat > app/src/main/java/com/raavan/esports/admob/MainActivity.kt <<'EOF'
-          package com.raavan.esports.admob
+          cat > app/src/main/java/com/raavan/esports/admob/MainActivity.java <<'EOF'
+          package com.raavan.esports.admob;
 
-          import android.app.Activity
-          import android.os.Bundle
-          import android.view.Gravity
-          import android.view.View
-          import android.view.ViewGroup
-          import android.webkit.CookieManager
-          import android.webkit.WebChromeClient
-          import android.webkit.WebView
-          import android.webkit.WebViewClient
-          import android.widget.FrameLayout
-          import android.widget.LinearLayout
-          import android.content.Intent
-          import android.net.Uri
-          import android.util.Log
-          import com.google.android.libraries.ads.mobile.sdk.MobileAds
-          import com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig
-          import com.google.android.libraries.ads.mobile.sdk.banner.AdView
-          import com.google.android.libraries.ads.mobile.sdk.banner.AdSize
-          import com.google.android.libraries.ads.mobile.sdk.banner.BannerAd
-          import com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest
-          import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback
-          import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.view.ViewGroup;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.CookieManager;
+          import android.content.Intent;
+          import android.net.Uri;
+          import android.widget.LinearLayout;
+          import android.widget.FrameLayout;
+          import com.google.android.gms.ads.MobileAds;
+          import com.google.android.gms.ads.AdRequest;
+          import com.google.android.gms.ads.AdSize;
+          import com.google.android.gms.ads.AdView;
 
-          class MainActivity : Activity() {
+          public class MainActivity extends Activity {
 
-              private lateinit var webView: WebView
-              private var bannerView: AdView? = null
+              private WebView webView;
+              private AdView adView;
 
-              private val appId = "ca-app-pub-4249303837052016~3743934650"
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
 
-              // Google official test banner ID for development.
-              private val bannerId = "ca-app-pub-3940256099942544/9214589741"
+                  LinearLayout layout = new LinearLayout(this);
+                  layout.setOrientation(LinearLayout.VERTICAL);
 
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
+                  webView = new WebView(this);
+                  webView.getSettings().setJavaScriptEnabled(true);
+                  webView.getSettings().setDomStorageEnabled(true);
+                  webView.getSettings().setDatabaseEnabled(true);
 
-                  val layout = LinearLayout(this)
-                  layout.orientation = LinearLayout.VERTICAL
-                  layout.setBackgroundColor(android.graphics.Color.BLACK)
+                  CookieManager.getInstance().setAcceptCookie(true);
+                  CookieManager.getInstance()
+                      .setAcceptThirdPartyCookies(webView, true);
 
-                  webView = WebView(this)
-                  webView.settings.javaScriptEnabled = true
-                  webView.settings.domStorageEnabled = true
-                  webView.settings.databaseEnabled = true
-                  webView.settings.javaScriptCanOpenWindowsAutomatically = true
-                  webView.settings.setSupportMultipleWindows(false)
+                  webView.setWebChromeClient(new WebChromeClient());
 
-                  CookieManager.getInstance().setAcceptCookie(true)
-                  CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public boolean shouldOverrideUrlLoading(
+                          WebView view, WebResourceRequest request) {
 
-                  webView.webChromeClient = WebChromeClient()
-                  webView.webViewClient = object : WebViewClient() {
-                      override fun shouldOverrideUrlLoading(
-                          view: WebView,
-                          url: String
-                      ): Boolean {
-                          val uri = Uri.parse(url)
-                          val host = uri.host ?: ""
+                          Uri uri = request.getUrl();
+                          String host = uri.getHost();
 
-                          if (uri.scheme == "https" &&
-                              host == "theraavanff-app.github.io") {
-                              return false
+                          if ("https".equals(uri.getScheme())
+                              && "theraavanff-app.github.io".equals(host)) {
+                              return false;
                           }
 
-                          return try {
-                              startActivity(Intent(Intent.ACTION_VIEW, uri))
-                              true
-                          } catch (e: Exception) {
-                              true
+                          try {
+                              startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                          } catch (Exception e) {
+                              e.printStackTrace();
                           }
+                          return true;
                       }
-                  }
+                  });
 
-                  webView.setDownloadListener { url, _, _, _, _ ->
+                  webView.setDownloadListener((url, userAgent,
+                      contentDisposition, mimeType, contentLength) -> {
                       try {
-                          startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                      } catch (e: Exception) {
-                          Log.e("Raavan", "Download link error", e)
+                          startActivity(new Intent(
+                              Intent.ACTION_VIEW, Uri.parse(url)));
+                      } catch (Exception e) {
+                          e.printStackTrace();
                       }
-                  }
+                  });
 
-                  layout.addView(
-                      webView,
-                      LinearLayout.LayoutParams(
+                  layout.addView(webView,
+                      new LinearLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+                  FrameLayout adContainer = new FrameLayout(this);
+                  layout.addView(adContainer,
+                      new LinearLayout.LayoutParams(
                           ViewGroup.LayoutParams.MATCH_PARENT,
-                          0,
-                          1f
-                      )
-                  )
+                          ViewGroup.LayoutParams.WRAP_CONTENT));
 
-                  val adContainer = FrameLayout(this)
-                  adContainer.setBackgroundColor(android.graphics.Color.WHITE)
-                  layout.addView(
-                      adContainer,
-                      LinearLayout.LayoutParams(
-                          ViewGroup.LayoutParams.MATCH_PARENT,
-                          60
-                      )
-                  )
+                  setContentView(layout);
 
-                  setContentView(layout)
+                  webView.loadUrl(
+                      "https://theraavanff-app.github.io/Raavan-eSports/");
 
-                  webView.loadUrl("https://theraavanff-app.github.io/Raavan-eSports/")
+                  MobileAds.initialize(this, status -> {
+                      runOnUiThread(() -> {
+                          adView = new AdView(this);
+                          adView.setAdSize(AdSize.BANNER);
+                          adView.setAdUnitId(
+                              "ca-app-pub-3940256099942544/9214589741");
 
-                  Thread {
-                      MobileAds.initialize(
-                          this,
-                          InitializationConfig.Builder(appId).build()
-                      ) {
-                          runOnUiThread {
-                              val adView = AdView(this)
-                              bannerView = adView
-
-                              adContainer.addView(
-                                  adView,
-                                  FrameLayout.LayoutParams(
-                                      ViewGroup.LayoutParams.WRAP_CONTENT,
-                                      ViewGroup.LayoutParams.WRAP_CONTENT,
-                                      Gravity.CENTER
-                                  )
-                              )
-
-                              val request = BannerAdRequest.Builder(
-                                  bannerId,
-                                  AdSize.BANNER
-                              ).build()
-
-                              adView.loadAd(
-                                  request,
-                                  object : AdLoadCallback<BannerAd> {
-                                      override fun onAdLoaded(ad: BannerAd) {
-                                          Log.d("Raavan", "Test banner loaded")
-                                      }
-
-                                      override fun onAdFailedToLoad(error: LoadAdError) {
-                                          Log.e("Raavan", "Banner error: $error")
-                                      }
-                                  }
-                              )
-                          }
-                      }
-                  }.start()
+                          adContainer.addView(adView);
+                          adView.loadAd(new AdRequest.Builder().build());
+                      });
+                  });
               }
 
-              override fun onBackPressed() {
-                  if (::webView.isInitialized && webView.canGoBack()) {
-                      webView.goBack()
+              @Override
+              public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
                   } else {
-                      super.onBackPressed()
+                      super.onBackPressed();
                   }
               }
 
-              override fun onDestroy() {
-                  bannerView?.destroy()
-                  if (::webView.isInitialized) {
-                      webView.destroy()
+              @Override
+              protected void onDestroy() {
+                  if (adView != null) {
+                      adView.destroy();
                   }
-                  super.onDestroy()
+                  if (webView != null) {
+                      webView.destroy();
+                  }
+                  super.onDestroy();
               }
           }
           EOF
@@ -277,5 +240,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAAVAN-ESP​​ORTS-APK
+          name: RAAVAN-ESPORTS-APK
           path: app/build/outputs/apk/debug/app-debug.apk
