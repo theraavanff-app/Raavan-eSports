@@ -138,6 +138,9 @@ jobs:
           import com.google.android.gms.ads.AdRequest;
           import com.google.android.gms.ads.AdSize;
           import com.google.android.gms.ads.AdView;
+          import com.google.android.ump.ConsentInformation;
+          import com.google.android.ump.ConsentRequestParameters;
+          import com.google.android.ump.UserMessagingPlatform;
 
           public class MainActivity extends Activity {
 
