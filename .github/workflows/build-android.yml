@@ -314,7 +314,7 @@ jobs:
                           adView = new AdView(this);
                           adView.setAdSize(AdSize.BANNER);
                           adView.setAdUnitId(
-                               "ca-app-pub-3940256099942544/9214589741"
+                               "ca-app-pub-4249303837052016/7627339341"
                                   );
 
                           adContainer.addView(adView);
