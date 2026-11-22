@@ -40,6 +40,7 @@ jobs:
           android.useAndroidX=true
           android.enableJetifier=true
           EOF
+
           cat > settings.gradle.kts <<'EOF'
           pluginManagement {
               repositories {
@@ -124,6 +125,8 @@ jobs:
 
           import android.app.Activity;
           import android.os.Bundle;
+          import android.view.View;
+          import android.view.Gravity;
           import android.view.ViewGroup;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
@@ -134,10 +137,13 @@ jobs:
           import android.net.Uri;
           import android.widget.LinearLayout;
           import android.widget.FrameLayout;
+          import android.widget.TextView;
+
           import com.google.android.gms.ads.MobileAds;
           import com.google.android.gms.ads.AdRequest;
           import com.google.android.gms.ads.AdSize;
           import com.google.android.gms.ads.AdView;
+
           import com.google.android.ump.ConsentInformation;
           import com.google.android.ump.ConsentRequestParameters;
           import com.google.android.ump.UserMessagingPlatform;
@@ -148,6 +154,8 @@ jobs:
               private AdView adView;
               private ConsentInformation consentInformation;
               private boolean adsInitialized = false;
+              private TextView privacyOptionsButton;
+              private FrameLayout adContainer;
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
@@ -204,9 +212,30 @@ jobs:
                       new LinearLayout.LayoutParams(
                           ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-                  FrameLayout adContainer = new FrameLayout(this);
-                  int gap = (int) (10 * getResources().getDisplayMetrics().density + 0.5f);
+                  privacyOptionsButton = new TextView(this);
+                  privacyOptionsButton.setText("Privacy settings");
+                  privacyOptionsButton.setTextSize(13);
+                  privacyOptionsButton.setGravity(Gravity.CENTER);
+                  privacyOptionsButton.setPadding(12, 8, 12, 8);
+                  privacyOptionsButton.setVisibility(View.GONE);
+
+                  privacyOptionsButton.setOnClickListener(v -> {
+                      UserMessagingPlatform.showPrivacyOptionsForm(
+                          this,
+                          formError -> updateAdsAfterConsent()
+                      );
+                  });
+
+                  layout.addView(privacyOptionsButton,
+                      new LinearLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          ViewGroup.LayoutParams.WRAP_CONTENT));
+
+                  adContainer = new FrameLayout(this);
+                  int gap = (int) (10 * getResources()
+                      .getDisplayMetrics().density + 0.5f);
                   adContainer.setPadding(0, gap, 0, 0);
+
                   layout.addView(adContainer,
                       new LinearLayout.LayoutParams(
                           ViewGroup.LayoutParams.MATCH_PARENT,
@@ -217,12 +246,76 @@ jobs:
                   webView.loadUrl(
                       "https://theraavanff-app.github.io/Raavan-eSports/");
 
+                  requestConsent();
+              }
+
+              private void requestConsent() {
+                  consentInformation =
+                      UserMessagingPlatform.getConsentInformation(this);
+
+                  ConsentRequestParameters params =
+                      new ConsentRequestParameters.Builder().build();
+
+                  consentInformation.requestConsentInfoUpdate(
+                      this,
+                      params,
+                      () -> {
+                          updatePrivacyOptionsButton();
+
+                          UserMessagingPlatform.loadAndShowConsentFormIfRequired(
+                              this,
+                              formError -> updateAdsAfterConsent()
+                          );
+                      },
+                      requestConsentError -> {
+                          updatePrivacyOptionsButton();
+                          updateAdsAfterConsent();
+                      }
+                  );
+              }
+
+              private void updatePrivacyOptionsButton() {
+                  boolean required =
+                      consentInformation.getPrivacyOptionsRequirementStatus()
+                          == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;
+
+                  privacyOptionsButton.setVisibility(
+                      required ? View.VISIBLE : View.GONE
+                  );
+              }
+
+              private void updateAdsAfterConsent() {
+                  if (consentInformation.canRequestAds()) {
+                      initializeAds();
+                  } else {
+                      if (adView != null) {
+                          if (adView.getParent() instanceof ViewGroup) {
+                              ((ViewGroup) adView.getParent())
+                                  .removeView(adView);
+                          }
+                          adView.destroy();
+                          adView = null;
+                      }
+                      adsInitialized = false;
+                  }
+              }
+
+              private void initializeAds() {
+                  if (adsInitialized) return;
+                  adsInitialized = true;
+
                   MobileAds.initialize(this, status -> {
                       runOnUiThread(() -> {
+                          if (!consentInformation.canRequestAds()) {
+                              adsInitialized = false;
+                              return;
+                          }
+
                           adView = new AdView(this);
                           adView.setAdSize(AdSize.BANNER);
                           adView.setAdUnitId(
-                              "ca-app-pub-3940256099942544/9214589741");
+                              "ca-app-pub-3940256099942544/9214589741"
+                          );
 
                           adContainer.addView(adView);
                           adView.loadAd(new AdRequest.Builder().build());
