@@ -146,6 +146,8 @@ jobs:
 
               private WebView webView;
               private AdView adView;
+              private ConsentInformation consentInformation;
+              private boolean adsInitialized = false;
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
