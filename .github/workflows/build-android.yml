@@ -2,6 +2,9 @@
 name: Build RAAVAN ESPORTS APK
 
 on:
+  push:
+    branches:
+      - admob-android-wrapper
   workflow_dispatch:
 
 jobs:
