@@ -1,0 +1,281 @@
+
+name: Build RAAVAN ESPORTS APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create Android project
+        shell: bash
+        run: |
+          mkdir -p app/src/main/java/com/raavan/esports/admob
+
+          cat > settings.gradle.kts <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "RaavanAdMobApp"
+          include(":app")
+          EOF
+
+          cat > build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.7.3" apply false
+              id("org.jetbrains.kotlin.android") version "2.0.21" apply false
+          }
+          EOF
+
+          cat > app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+
+          android {
+              namespace = "com.raavan.esports.admob"
+              compileSdk = 35
+
+              defaultConfig {
+                  applicationId = "com.raavan.esports.admob"
+                  minSdk = 24
+                  targetSdk = 35
+                  versionCode = 1
+                  versionName = "1.0"
+              }
+          }
+
+          dependencies {
+              implementation("com.google.android.libraries.ads.mobile.sdk:ads-mobile-sdk:1.7.0")
+          }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+              <application
+                  android:allowBackup="true"
+                  android:label="RAAVAN ESPORTS"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  android:usesCleartextTraffic="false">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:screenOrientation="unspecified">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/java/com/raavan/esports/admob/MainActivity.kt <<'EOF'
+          package com.raavan.esports.admob
+
+          import android.app.Activity
+          import android.os.Bundle
+          import android.view.Gravity
+          import android.view.View
+          import android.view.ViewGroup
+          import android.webkit.CookieManager
+          import android.webkit.WebChromeClient
+          import android.webkit.WebView
+          import android.webkit.WebViewClient
+          import android.widget.FrameLayout
+          import android.widget.LinearLayout
+          import android.content.Intent
+          import android.net.Uri
+          import android.util.Log
+          import com.google.android.libraries.ads.mobile.sdk.MobileAds
+          import com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig
+          import com.google.android.libraries.ads.mobile.sdk.banner.AdView
+          import com.google.android.libraries.ads.mobile.sdk.banner.AdSize
+          import com.google.android.libraries.ads.mobile.sdk.banner.BannerAd
+          import com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest
+          import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback
+          import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
+
+          class MainActivity : Activity() {
+
+              private lateinit var webView: WebView
+              private var bannerView: AdView? = null
+
+              private val appId = "ca-app-pub-4249303837052016~3743934650"
+
+              // Google official test banner ID for development.
+              private val bannerId = "ca-app-pub-3940256099942544/9214589741"
+
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+
+                  val layout = LinearLayout(this)
+                  layout.orientation = LinearLayout.VERTICAL
+                  layout.setBackgroundColor(android.graphics.Color.BLACK)
+
+                  webView = WebView(this)
+                  webView.settings.javaScriptEnabled = true
+                  webView.settings.domStorageEnabled = true
+                  webView.settings.databaseEnabled = true
+                  webView.settings.javaScriptCanOpenWindowsAutomatically = true
+                  webView.settings.setSupportMultipleWindows(false)
+
+                  CookieManager.getInstance().setAcceptCookie(true)
+                  CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
+
+                  webView.webChromeClient = WebChromeClient()
+                  webView.webViewClient = object : WebViewClient() {
+                      override fun shouldOverrideUrlLoading(
+                          view: WebView,
+                          url: String
+                      ): Boolean {
+                          val uri = Uri.parse(url)
+                          val host = uri.host ?: ""
+
+                          if (uri.scheme == "https" &&
+                              host == "theraavanff-app.github.io") {
+                              return false
+                          }
+
+                          return try {
+                              startActivity(Intent(Intent.ACTION_VIEW, uri))
+                              true
+                          } catch (e: Exception) {
+                              true
+                          }
+                      }
+                  }
+
+                  webView.setDownloadListener { url, _, _, _, _ ->
+                      try {
+                          startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                      } catch (e: Exception) {
+                          Log.e("Raavan", "Download link error", e)
+                      }
+                  }
+
+                  layout.addView(
+                      webView,
+                      LinearLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          0,
+                          1f
+                      )
+                  )
+
+                  val adContainer = FrameLayout(this)
+                  adContainer.setBackgroundColor(android.graphics.Color.WHITE)
+                  layout.addView(
+                      adContainer,
+                      LinearLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT,
+                          60
+                      )
+                  )
+
+                  setContentView(layout)
+
+                  webView.loadUrl("https://theraavanff-app.github.io/Raavan-eSports/")
+
+                  Thread {
+                      MobileAds.initialize(
+                          this,
+                          InitializationConfig.Builder(appId).build()
+                      ) {
+                          runOnUiThread {
+                              val adView = AdView(this)
+                              bannerView = adView
+
+                              adContainer.addView(
+                                  adView,
+                                  FrameLayout.LayoutParams(
+                                      ViewGroup.LayoutParams.WRAP_CONTENT,
+                                      ViewGroup.LayoutParams.WRAP_CONTENT,
+                                      Gravity.CENTER
+                                  )
+                              )
+
+                              val request = BannerAdRequest.Builder(
+                                  bannerId,
+                                  AdSize.BANNER
+                              ).build()
+
+                              adView.loadAd(
+                                  request,
+                                  object : AdLoadCallback<BannerAd> {
+                                      override fun onAdLoaded(ad: BannerAd) {
+                                          Log.d("Raavan", "Test banner loaded")
+                                      }
+
+                                      override fun onAdFailedToLoad(error: LoadAdError) {
+                                          Log.e("Raavan", "Banner error: $error")
+                                      }
+                                  }
+                              )
+                          }
+                      }
+                  }.start()
+              }
+
+              override fun onBackPressed() {
+                  if (::webView.isInitialized && webView.canGoBack()) {
+                      webView.goBack()
+                  } else {
+                      super.onBackPressed()
+                  }
+              }
+
+              override fun onDestroy() {
+                  bannerView?.destroy()
+                  if (::webView.isInitialized) {
+                      webView.destroy()
+                  }
+                  super.onDestroy()
+              }
+          }
+          EOF
+
+      - name: Build APK
+        run: gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAAVAN-ESP​​ORTS-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
