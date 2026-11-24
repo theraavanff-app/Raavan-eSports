@@ -305,6 +305,87 @@
             </form>
         </section>
 
+        
+<!-- ADMIN SECURITY SETTINGS -->
+<section class="admin-section" id="securitySettings">
+    <div class="section-heading">
+        <div class="section-icon">🔐</div>
+        <div>
+            <h3>Security Settings</h3>
+            <p>Change your Admin ID and password</p>
+        </div>
+    </div>
+
+    <form id="changeAdminIdForm">
+        <h4>Change Admin ID</h4>
+
+        <label for="newAdminId">New Admin ID</label>
+        <input
+            type="text"
+            id="newAdminId"
+            placeholder="Enter new Admin ID"
+            minlength="4"
+            maxlength="40"
+            required
+        >
+
+        <label for="adminIdCurrentPassword">Current Admin Password</label>
+        <input
+            type="password"
+            id="adminIdCurrentPassword"
+            placeholder="Verify current password"
+            autocomplete="current-password"
+            required
+        >
+
+        <button class="primary-btn" type="submit">
+            UPDATE ADMIN ID →
+        </button>
+        <p id="adminIdMessage" class="admin-message"></p>
+    </form>
+
+    <div class="security-divider"></div>
+
+    <form id="changeAdminPasswordForm">
+        <h4>Change Admin Password</h4>
+
+        <label for="currentAdminPassword">Current Password</label>
+        <input
+            type="password"
+            id="currentAdminPassword"
+            placeholder="Enter current password"
+            autocomplete="current-password"
+            required
+        >
+
+        <label for="newAdminPassword">New Password</label>
+        <input
+            type="password"
+            id="newAdminPassword"
+            placeholder="Enter new password"
+            minlength="8"
+            autocomplete="new-password"
+            required
+        >
+
+        <label for="confirmAdminPassword">Confirm New Password</label>
+        <input
+            type="password"
+            id="confirmAdminPassword"
+            placeholder="Confirm new password"
+            minlength="8"
+            autocomplete="new-password"
+            required
+        >
+
+        <button class="primary-btn" type="submit">
+            UPDATE PASSWORD →
+        </button>
+        <p id="adminPasswordMessage" class="admin-message"></p>
+    </form>
+</section>
+        
+
         <!-- BANNER MANAGEMENT -->
         <section class="admin-section" id="bannerManagement">
             <div class="section-heading">
