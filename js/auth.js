@@ -134,52 +134,73 @@ export function initAuthPage() {
 
         document.getElementById("adminSubmit").addEventListener("click", async () => {
 
-            const id = document.getElementById("adminID").value.trim();
-            const password = document.getElementById("adminPassword").value;
-            const error = document.getElementById("adminError");
-            const submitButton = document.getElementById("adminSubmit");
+    const id = document.getElementById("adminID").value.trim();
+    const password = document.getElementById("adminPassword").value;
+    const errorBox = document.getElementById("adminError");
+    const submitButton = document.getElementById("adminSubmit");
 
-            error.textContent = "";
+    errorBox.textContent = "";
 
-            if (id !== ADMIN_ID) {
-                error.textContent = "Incorrect Admin ID!";
-                return;
-            }
+    if (!id || !password) {
+        errorBox.textContent = "Enter Admin ID and Password!";
+        return;
+    }
 
-            if (!password) {
-                error.textContent = "Enter Firebase Admin Password!";
-                return;
-            }
+    submitButton.disabled = true;
+    submitButton.textContent = "VERIFYING...";
 
-            submitButton.disabled = true;
-            submitButton.textContent = "VERIFYING...";
+    try {
+        const result = await signInWithEmailAndPassword(
+            auth,
+            ADMIN_EMAIL,
+            password
+        );
 
+        if (result.user.email !== ADMIN_EMAIL) {
+            throw new Error("Admin account verification failed.");
+        }
+
+        const settingsSnap = await getDoc(
+            doc(db, "appSettings", "adminSecurity")
+        );
+
+        const savedAdminId =
+            settingsSnap.exists() &&
+            typeof settingsSnap.data().adminId === "string"
+                ? settingsSnap.data().adminId
+                : "devloper gautam";
+
+        if (id !== savedAdminId) {
+            await signOut(auth);
+            errorBox.textContent = "Incorrect Admin ID!";
+            submitButton.disabled = false;
+            submitButton.textContent = "ENTER ADMIN PANEL";
+            return;
+        }
+
+        window.location.href =
+            "https://theraavanff-app.github.io/Raavan-eSports/pages/admin.html";
+
+    } catch (err) {
+        console.error("Admin login error:", err);
+
+        if (auth.currentUser) {
             try {
-                const result = await signInWithEmailAndPassword(
-                    auth,
-                    ADMIN_EMAIL,
-                    password
-                );
-
-                if (result.user.email !== ADMIN_EMAIL) {
-                    throw new Error("Admin account verification failed.");
-                }
-
-                window.location.href =
-"https://theraavanff-app.github.io/Raavan-eSports/pages/admin.html";
-
-            } catch (error) {
-                console.error("Admin login error:", error);
-
-                error.textContent =
-                    error.code === "auth/invalid-credential"
-                    ? "Wrong Firebase Admin Password!"
-                    : error.message;
-
-                submitButton.disabled = false;
-                submitButton.textContent = "ENTER ADMIN PANEL";
+                await signOut(auth);
+            } catch (signOutError) {
+                console.error(signOutError);
             }
-        });
+        }
+
+        errorBox.textContent =
+            err.code === "auth/invalid-credential"
+                ? "Wrong Firebase Admin Password!"
+                : err.message;
+
+        submitButton.disabled = false;
+        submitButton.textContent = "ENTER ADMIN PANEL";
+    }
+});
     }
 
     // REGISTER
