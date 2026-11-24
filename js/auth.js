@@ -178,8 +178,7 @@ export function initAuthPage() {
             return;
         }
 
-        window.location.href =
-            "https://theraavanff-app.github.io/Raavan-eSports/pages/admin.html";
+        window.location.href = "./pages/admin.html";
 
     } catch (err) {
         console.error("Admin login error:", err);
