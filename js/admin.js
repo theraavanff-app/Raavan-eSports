@@ -150,6 +150,150 @@ adminLogout.addEventListener("click", async () => {
 });
 
 // =====================================
+// ADMIN SECURITY SETTINGS
+// =====================================
+
+// CHANGE ADMIN ID
+
+const changeAdminIdForm =
+    document.getElementById("changeAdminIdForm");
+
+const adminIdMessage =
+    document.getElementById("adminIdMessage");
+
+changeAdminIdForm.addEventListener("submit", async e => {
+
+    e.preventDefault();
+
+    if (!adminVerified || !auth.currentUser) return;
+
+    const newAdminId =
+        document.getElementById("newAdminId").value.trim();
+
+    const currentPassword =
+        document.getElementById("adminIdCurrentPassword").value;
+
+    adminIdMessage.textContent = "";
+
+    if (newAdminId.length < 4 || newAdminId.length > 40) {
+        adminIdMessage.textContent =
+            "Admin ID must be 4 to 40 characters.";
+        return;
+    }
+
+    adminIdMessage.textContent = "Verifying current password...";
+
+    try {
+        const user = auth.currentUser;
+
+        const credential = EmailAuthProvider.credential(
+            user.email,
+            currentPassword
+        );
+
+        await reauthenticateWithCredential(user, credential);
+
+        await setDoc(
+            doc(db, "appSettings", "adminSecurity"),
+            {
+                adminId: newAdminId,
+                updatedAt: serverTimestamp()
+            },
+            { merge: true }
+        );
+
+        changeAdminIdForm.reset();
+
+        adminIdMessage.textContent =
+            "Admin ID changed successfully!";
+
+    } catch (error) {
+        console.error("Admin ID change error:", error);
+
+        adminIdMessage.textContent =
+            error.code === "auth/invalid-credential"
+                ? "Current password is incorrect."
+                : error.message || "Unable to change Admin ID.";
+    }
+});
+
+
+// CHANGE ADMIN PASSWORD
+
+const changeAdminPasswordForm =
+    document.getElementById("changeAdminPasswordForm");
+
+const adminPasswordMessage =
+    document.getElementById("adminPasswordMessage");
+
+changeAdminPasswordForm.addEventListener("submit", async e => {
+
+    e.preventDefault();
+
+    if (!adminVerified || !auth.currentUser) return;
+
+    const currentPassword =
+        document.getElementById("currentAdminPassword").value;
+
+    const newPassword =
+        document.getElementById("newAdminPassword").value;
+
+    const confirmPassword =
+        document.getElementById("confirmAdminPassword").value;
+
+    adminPasswordMessage.textContent = "";
+
+    if (newPassword.length < 8) {
+        adminPasswordMessage.textContent =
+            "New password must be at least 8 characters.";
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        adminPasswordMessage.textContent =
+            "New passwords do not match.";
+        return;
+    }
+
+    if (currentPassword === newPassword) {
+        adminPasswordMessage.textContent =
+            "New password must be different.";
+        return;
+    }
+
+    adminPasswordMessage.textContent =
+        "Verifying current password...";
+
+    try {
+        const user = auth.currentUser;
+
+        const credential = EmailAuthProvider.credential(
+            user.email,
+            currentPassword
+        );
+
+        await reauthenticateWithCredential(user, credential);
+
+        await updatePassword(user, newPassword);
+
+        changeAdminPasswordForm.reset();
+
+        adminPasswordMessage.textContent =
+            "Admin password changed successfully!";
+
+    } catch (error) {
+        console.error("Admin password change error:", error);
+
+        adminPasswordMessage.textContent =
+            error.code === "auth/invalid-credential"
+                ? "Current password is incorrect."
+                : error.code === "auth/weak-password"
+                    ? "Password is too weak."
+                    : error.message || "Unable to change password.";
+    }
+});
+
+// =====================================
 // CREATE TOURNAMENT
 // =====================================
 const categorySelect = document.getElementById("tCategory");
